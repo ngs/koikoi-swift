@@ -123,3 +123,6 @@ custom_rules:
 # Swift Testing の @Suite / @Test は宣言と同じ行に置く（tides-swift は XCTest のため未設定だった）
 attributes:
   always_on_same_line: ["@Suite", "@Test"]
+cyclomatic_complexity:
+  warning: 15
+  error: 20
