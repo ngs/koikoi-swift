@@ -28,6 +28,24 @@ import Testing
         #expect(seenParents == [.player, .opponent])
     }
 
+    /// 月が異なる最初のペアで親が決まる。
+    @Test func pickParentFirstDifferingPair() throws {
+        // 松×2 のペアを飛ばし、梅 vs 桜 のペアで決まる
+        let result = try #require(Game.pickParent(from: cards(0, 1, 4, 8)))
+        #expect(result.parent == .player)
+        #expect(result.playerCard == Card.all[4])
+        #expect(result.opponentCard == Card.all[8])
+
+        let reversed = try #require(Game.pickParent(from: cards(0, 1, 8, 4)))
+        #expect(reversed.parent == .opponent)
+    }
+
+    /// 全ペアが同月の並びでは親を決められず nil（再シャッフルの引き金）。
+    @Test func pickParentAllSameMonthPairs() {
+        // Card.all は月ごとに並んでいるため、そのままだと全ペアが同月
+        #expect(Game.pickParent(from: Card.all) == nil)
+    }
+
     @Test func startRound() {
         var game = Game(rounds: 12, rng: GameRandom(seed: 2))
         game.startRound()

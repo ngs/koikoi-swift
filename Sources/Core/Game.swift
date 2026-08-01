@@ -91,25 +91,42 @@ public struct Game: Sendable, Codable, Hashable {
 
     /// 親決め: 山札から 1 枚ずつ引き、月が若い方が親。
     mutating func determineParent() {
-        let deck = Card.all.shuffled(using: &rng)
-
-        var index = 0
+        // 全ペアが同月という極端な並びを引いたら再シャッフルする
+        // （go-koikoi は同じ並びを再走査するため理論上は停止しない）
         while true {
+            let deck = Card.all.shuffled(using: &rng)
+            if let result = Self.pickParent(from: deck) {
+                nextParent = result.parent
+                parentDrawnCards = [.player: result.playerCard, .opponent: result.opponentCard]
+                return
+            }
+        }
+    }
+
+    /// 親決めの結果（親と両者の引き札）。
+    struct ParentDraw: Hashable {
+        let parent: Seat
+        let playerCard: Card
+        let opponentCard: Card
+    }
+
+    /// 山札を先頭から 2 枚ずつ引き、月が異なった最初のペアで親を決める。
+    /// 最後まで全ペアが同月なら nil（呼び出し側で再シャッフル）。
+    static func pickParent(from deck: [Card]) -> ParentDraw? {
+        var index = 0
+        while index + 1 < deck.count {
             let playerCard = deck[index]
             let opponentCard = deck[index + 1]
             index += 2
 
             if playerCard.month != opponentCard.month {
-                nextParent = playerCard.month.rawValue < opponentCard.month.rawValue
+                let parent: Seat = playerCard.month.rawValue < opponentCard.month.rawValue
                     ? .player : .opponent
-                parentDrawnCards = [.player: playerCard, .opponent: opponentCard]
-                return
-            }
-            // 同じ月の場合は引き直し
-            if index + 2 > deck.count {
-                index = 0
+                return ParentDraw(
+                    parent: parent, playerCard: playerCard, opponentCard: opponentCard)
             }
         }
+        return nil
     }
 
     /// ラウンド開始: シャッフルして配る。
