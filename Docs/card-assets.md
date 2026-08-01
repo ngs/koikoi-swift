@@ -35,8 +35,3 @@ Scripts/trace_cards.sh   # 前処理 + Illustrator トレース + xcassets 反�
 
 前提: Adobe Illustrator、`python3` + Pillow + NumPy（`pip3 install pillow numpy`）。
 原画の場所は `KOIKOI_SPRITES_DIR` で上書きできる。
-
-## 将来のフラットデザイン化
-
-モダンフラットな再解釈で描き直す構想がある。Firefly 用プロンプト一式は
-[firefly-prompts.md](firefly-prompts.md) に保存済み（スタイル文 + 48 枚の主題文）。
