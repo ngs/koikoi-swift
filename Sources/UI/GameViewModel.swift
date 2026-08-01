@@ -193,7 +193,8 @@ public final class GameViewModel {
             guard !Task.isCancelled, simulator.seatToMove == .opponent else { return }
 
             let move = await computeOpponentMove()
-            guard let move, simulator.seatToMove == .opponent else { return }
+            // 探索の await 中にキャンセル・置き換えされた可能性があるため再確認する
+            guard !Task.isCancelled, let move, simulator.seatToMove == .opponent else { return }
             if case .koikoi = move {
                 requestPersonaLine(personaKoikoiEvent())
             }
