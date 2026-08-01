@@ -150,7 +150,7 @@ import Testing
         var sim = RoundSimulator(game: game)
         sim.apply(.playHand(handID: 47, fieldChoiceID: nil))
 
-        guard case .selectDrawnField(.player, let drawn, let matches) = sim.phase else {
+        guard case let .selectDrawnField(.player, drawn, matches) = sim.phase else {
             Issue.record("expected selectDrawnField, got \(sim.phase)")
             return
         }

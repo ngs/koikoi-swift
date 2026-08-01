@@ -111,14 +111,22 @@ public struct RoundSimulator: Sendable, Hashable {
     public mutating func apply(_ move: Move) {
         switch (phase, move) {
         case let (.selectHand(seat), .playHand(handID, fieldChoiceID)):
-            guard let handCard = Card.card(id: handID) else {
-                preconditionFailure("invalid hand card id \(handID)")
+            // 不正な Move で状態を壊さないよう、手札・場札の実在を検証する
+            guard let handCard = game.hand(for: seat).first(where: { $0.id == handID }) else {
+                preconditionFailure("hand card \(handID) is not in \(seat)'s hand")
             }
-            let fieldChoice = fieldChoiceID.flatMap(Card.card(id:))
+            let matches = game.matchingFieldCards(for: handCard)
+            let fieldChoice = fieldChoiceID.flatMap { id in matches.first { $0.id == id } }
+            precondition(
+                fieldChoiceID == nil || fieldChoice != nil,
+                "field choice \(fieldChoiceID ?? -1) is not a matching field card")
             game.playCard(handCard, fieldChoice: fieldChoice, by: seat)
             drawStep(for: seat)
-        case let (.selectDrawnField(seat, drawn, _), .chooseDrawnField(fieldID)):
-            game.playDrawnCard(drawn, fieldChoice: Card.card(id: fieldID), by: seat)
+        case let (.selectDrawnField(seat, drawn, matches), .chooseDrawnField(fieldID)):
+            guard let fieldChoice = matches.first(where: { $0.id == fieldID }) else {
+                preconditionFailure("field card \(fieldID) is not a match candidate")
+            }
+            game.playDrawnCard(drawn, fieldChoice: fieldChoice, by: seat)
             checkYaku(for: seat)
         case (.decideKoikoi(let seat, _), .koikoi):
             game.koikoiDeclared[seat] = true
