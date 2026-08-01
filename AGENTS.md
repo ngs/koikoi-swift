@@ -41,7 +41,7 @@ visionOS は平面ウィンドウ移植ではなく **OS の特徴を最大限�
 
 ### カードアセット
 
-札 48 枚は **SVG ベクター自前描画**（`Assets/cards/`）。共通パレット・枠・寸法（研究: 実物比率はおよそ 5.4:8.7）で一貫性を保ち、`Scripts/` の変換スクリプトで xcassets へ落とす。伝統意匠（松に鶴・芒に月など）の構図は保ちつつ、モダンでフラットな解釈にする。
+札 48 枚は **SVG ベクター**。旧 Koikoi（Unity 版）の原画を Illustrator の Image Trace でベクター化したものが正で、コミット対象は `Resources/Assets.xcassets/Cards/` の imageset のみ（詳細と再生成手順は `Docs/card-assets.md`）。原寸 748×1200・実物比率およそ 5.4:8.7。アセット名は `KoikoiUI` の `Card.assetName` と一致させる（テストで検証される）。
 
 ## Build & test
 
