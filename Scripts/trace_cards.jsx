@@ -6,19 +6,11 @@
 
 // ---- 設定 -------------------------------------------------------------
 
-// 入力は Scripts/pretrace_cards.py が紙テクスチャを除去した PNG
-// （trace_cards.sh が生成する）
+// 入力は Scripts/pretrace_cards.py が紙テクスチャを除去した PNG、
+// 出力は中間生成物としての SVG（どちらも /tmp・コミットしない）。
+// xcassets への反映は Scripts/cards_to_xcassets.sh が行う。
 var INPUT_DIR = Folder("/tmp/koikoi_pretrace");
-// 出力はこのスクリプトの位置（<repo>/Scripts/）からリポジトリ相対で導出する
-var OUTPUT_DIR = (function resolveOutputDir() {
-    try {
-        var scriptFile = new File($.fileName);
-        if (scriptFile.exists) {
-            return Folder(scriptFile.parent.parent.fsName + "/Assets/cards/traced");
-        }
-    } catch (e) {}
-    return Folder("~/src/koikoi-swift/Assets/cards/traced");
-})();
+var OUTPUT_DIR = Folder("/tmp/koikoi_traced");
 
 // go-koikoi の札 ID (0-47) 順のスラッグ。
 // 旧スプライト {月:02d}-{連番:02d}.jpg → id = (月-1)*4 + (連番-1)

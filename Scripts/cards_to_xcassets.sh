@@ -1,15 +1,16 @@
 #!/bin/bash
-# Assets/cards/traced/*.svg をアプリの Assets.xcassets 内 Cards フォルダに変換する。
+# トレース済み SVG をアプリの Assets.xcassets 内 Cards フォルダに変換する。
 # 各札は preserves-vector-representation 付きの imageset になる（SVG のまま保持）。
 # Cards フォルダだけを再生成し、AccentColor 等の他アセットには触れない。
+# 入力は既定で /tmp/koikoi_traced（引数で上書き可）。
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC_DIR="$REPO_ROOT/Assets/cards/traced"
+SRC_DIR="${1:-/tmp/koikoi_traced}"
 XCASSETS="$REPO_ROOT/Resources/Assets.xcassets/Cards"
 
 if [ ! -d "$SRC_DIR" ]; then
-  echo "traced SVG がありません: $SRC_DIR (先に Scripts/trace_cards.sh を実行)" >&2
+  echo "トレース済み SVG がありません: $SRC_DIR (先に Scripts/trace_cards.sh を実行)" >&2
   exit 1
 fi
 
