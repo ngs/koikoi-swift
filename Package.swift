@@ -41,6 +41,7 @@ let package = Package(
             ]
         ),
         // SwiftUI views and view models shared by every platform.
+        // 札画像はアプリ側 Resources/Assets.xcassets/Cards（メインバンドル）にある。
         .target(
             name: "KoikoiUI",
             dependencies: [
@@ -62,6 +63,11 @@ let package = Package(
             name: "KoikoiAITests",
             dependencies: ["KoikoiAI", "KoikoiCore"],
             path: "Tests/KoikoiAITests"
+        ),
+        .testTarget(
+            name: "KoikoiUITests",
+            dependencies: ["KoikoiUI", "KoikoiCore"],
+            path: "Tests/KoikoiUITests"
         ),
     ]
 )

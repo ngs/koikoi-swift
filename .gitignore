@@ -26,3 +26,4 @@ build/
 match_deploy_key*
 
 fastlane/Preview.html
+Assets/cards/traced/trace_log.txt
