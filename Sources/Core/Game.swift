@@ -69,6 +69,11 @@ public struct Game: Sendable, Codable, Hashable {
         hands[seat] ?? []
     }
 
+    /// 手札を差し替える（AI 探索の決定化・テスト用。通常進行では使わない）。
+    public mutating func setHand(_ cards: [Card], for seat: Seat) {
+        hands[seat] = cards
+    }
+
     public func captured(for seat: Seat) -> [Card] {
         captured[seat] ?? []
     }
