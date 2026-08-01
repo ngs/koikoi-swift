@@ -123,7 +123,8 @@ public struct GameView: View {
                             }
                     }
                     .buttonStyle(.plain)
-                    .disabled(model.prompt != .selectHand && model.pendingHandCard != card)
+                    // 手札選択中と場札選択中（解除・選び直し）はタップ可能
+                    .disabled(model.prompt != .selectHand && model.pendingHandCard == nil)
                 }
             }
             .padding(.vertical, 4)

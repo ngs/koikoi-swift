@@ -11,9 +11,11 @@ import Testing
         GameViewModel(rounds: 1, difficulty: .normal, seed: seed, aiStepDelay: .zero)
     }
 
-    /// 相手の手番が終わるのを待つ。
+    /// 相手の手番が終わるのを待つ（上限 2 秒）。
     private func waitForPlayerPrompt(_ model: GameViewModel) async {
-        for _ in 0..<200 where model.prompt == .opponentTurn {
+        var iterations = 0
+        while model.prompt == .opponentTurn, iterations < 200 {
+            iterations += 1
             try? await Task.sleep(for: .milliseconds(10))
         }
     }
@@ -82,6 +84,13 @@ import Testing
         model.cancelFieldSelection()
         #expect(model.prompt == .selectHand)
         #expect(model.pendingHandCard == nil)
+
+        // 同じ手札の再タップでも選択解除できる（トグル）
+        model.tapHandCard(Card.all[0])
+        #expect(model.pendingHandCard == Card.all[0])
+        model.tapHandCard(Card.all[0])
+        #expect(model.pendingHandCard == nil)
+        #expect(model.prompt == .selectHand)
 
         model.tapHandCard(Card.all[0])
         model.tapFieldCard(Card.all[3])

@@ -81,7 +81,13 @@ public final class GameViewModel {
     // MARK: - プレイヤー操作
 
     /// 手札をタップ。2 枚マッチなら場札選択へ、それ以外は即座に出す。
+    /// 場札選択中は、同じ札で選択解除・別の札で選び直しになる。
     public func tapHandCard(_ card: Card) {
+        if let pending = pendingHandCard {
+            pendingHandCard = nil
+            prompt = .selectHand
+            if card == pending { return }  // トグルで解除
+        }
         guard prompt == .selectHand, case .selectHand(.player) = simulator.phase else { return }
         guard game.hand(for: .player).contains(card) else { return }
 
@@ -166,16 +172,18 @@ public final class GameViewModel {
         case .finished(let outcome):
             prompt = .roundEnd(outcome)
             aiTask?.cancel()
+            aiTask = nil
             announceRoundEnd(outcome)
         }
     }
 
     /// 相手の決定点が続く限り AI で 1 手ずつ進める。
+    /// 既存タスクは必ずキャンセルして置き換える（自身で aiTask を消さないので
+    /// 古いタスクが新しいタスクの参照を消す競合は起きない）。
     private func scheduleOpponentTurn() {
-        guard aiTask == nil || aiTask?.isCancelled != false else { return }
+        aiTask?.cancel()
         aiTask = Task { [weak self] in
             await self?.runOpponentTurn()
-            self?.aiTask = nil
         }
     }
 
