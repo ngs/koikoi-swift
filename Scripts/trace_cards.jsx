@@ -9,7 +9,16 @@
 // 入力は Scripts/pretrace_cards.py が紙テクスチャを除去した PNG
 // （trace_cards.sh が生成する）
 var INPUT_DIR = Folder("/tmp/koikoi_pretrace");
-var OUTPUT_DIR = Folder("~/src/koikoi-swift/Assets/cards/traced");
+// 出力はこのスクリプトの位置（<repo>/Scripts/）からリポジトリ相対で導出する
+var OUTPUT_DIR = (function resolveOutputDir() {
+    try {
+        var scriptFile = new File($.fileName);
+        if (scriptFile.exists) {
+            return Folder(scriptFile.parent.parent.fsName + "/Assets/cards/traced");
+        }
+    } catch (e) {}
+    return Folder("~/src/koikoi-swift/Assets/cards/traced");
+})();
 
 // go-koikoi の札 ID (0-47) 順のスラッグ。
 // 旧スプライト {月:02d}-{連番:02d}.jpg → id = (月-1)*4 + (連番-1)

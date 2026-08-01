@@ -4,9 +4,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 JSX="$SCRIPT_DIR/trace_cards.jsx"
-INPUT_DIR="$HOME/Library/CloudStorage/Dropbox/Codes/Koikoi/Assets/Sprites/Cards"
+# 旧 Koikoi の原画ディレクトリ（KOIKOI_SPRITES_DIR で上書き可）
+INPUT_DIR="${KOIKOI_SPRITES_DIR:-$HOME/Library/CloudStorage/Dropbox/Codes/Koikoi/Assets/Sprites/Cards}"
 PRETRACE_DIR="/tmp/koikoi_pretrace"
+OUTPUT_DIR="$REPO_ROOT/Assets/cards/traced"
 
 if [ ! -f "$JSX" ]; then
   echo "trace_cards.jsx が見つかりません: $JSX" >&2
@@ -26,4 +29,4 @@ tell application id "com.adobe.illustrator"
 end tell
 EOF
 
-echo "完了。出力: ~/src/koikoi-swift/Assets/cards/traced/ (trace_log.txt 参照)"
+echo "完了。出力: $OUTPUT_DIR (trace_log.txt 参照)"

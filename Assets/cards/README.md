@@ -33,6 +33,9 @@ Scripts/trace_cards.sh        # 前処理 + Illustrator 一括トレース（要
 Scripts/cards_to_xcassets.sh  # xcassets へ反映
 ```
 
+前提: Adobe Illustrator、`python3` + Pillow + NumPy（前処理に使用。
+`pip3 install pillow numpy`）。原画の場所は `KOIKOI_SPRITES_DIR` で上書きできる。
+
 ## 将来のフラットデザイン化
 
 モダンフラットな再解釈で描き直す構想がある。Firefly 用プロンプト一式を

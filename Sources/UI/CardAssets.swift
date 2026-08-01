@@ -4,7 +4,10 @@ import SwiftUI
 public extension Card {
     /// Cards.xcassets 内の imageset 名（`{id:02d}_{slug}` 形式・ID 順）。
     var assetName: String {
-        Self.assetNames[id]
+        precondition(
+            Self.assetNames.indices.contains(id),
+            "card id \(id) has no asset name (expected 0..<\(Self.assetNames.count))")
+        return Self.assetNames[id]
     }
 
     /// 実物の札の縦横比（約 5.4:8.7。スプライト原寸 748×1200 に一致）。
