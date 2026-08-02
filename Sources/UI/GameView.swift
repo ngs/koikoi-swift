@@ -8,6 +8,13 @@ public struct GameView: View {
     @State private var model: GameViewModel
     @FocusState private var boardFocused: Bool
     private let onExit: (() -> Void)?
+    /// 札タイルの固定幅（シュリンクさせない）。
+    static let cardTileWidth: CGFloat = 64
+    /// 手札/場札 8 枚が 1 行に収まる幅（8×64 + 7×8 スペーシング + 左右パディング）。
+    static let minBoardWidth: CGFloat = cardTileWidth * 8 + 8 * 7 + 12 * 2
+    /// 全区画（相手陣・場 2 行・山札・自陣）が潰れず収まる高さ。
+    static let minBoardHeight: CGFloat = 760
+
     /// D&D の受け皿を張るか。ImageRenderer はドロップ受けのバッキングビューを
     /// 描画できず禁止マークのプレースホルダになるため、スナップショット描画時のみ
     /// false にする（実アプリでは常に true）。
@@ -33,6 +40,8 @@ public struct GameView: View {
             playerArea
         }
         .padding(12)
+        // 場札・手札 8 枚が 1 行に、獲得札もシュリンクせず収まる最小寸法
+        .frame(minWidth: Self.minBoardWidth, minHeight: Self.minBoardHeight)
         .background(Color(red: 0.10, green: 0.28, blue: 0.20))
         .overlay { overlays }
         .animation(.default, value: model.game.field)
@@ -104,7 +113,7 @@ public struct GameView: View {
     private var fieldArea: some View {
         VStack(spacing: 8) {
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 56, maximum: 72), spacing: 8)],
+                columns: [GridItem(.adaptive(minimum: Self.cardTileWidth, maximum: Self.cardTileWidth), spacing: 8)],
                 spacing: 8
             ) {
                 ForEach(Array(model.game.field.enumerated()), id: \.element.id) { index, card in
@@ -167,7 +176,7 @@ public struct GameView: View {
                 reaches: model.playerReaches,
                 cardWidth: 30)
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 56, maximum: 72), spacing: 8)],
+                columns: [GridItem(.adaptive(minimum: Self.cardTileWidth, maximum: Self.cardTileWidth), spacing: 8)],
                 spacing: 8
             ) {
                 ForEach(Array(model.game.hand(for: .player).enumerated()), id: \.element.id) { index, card in

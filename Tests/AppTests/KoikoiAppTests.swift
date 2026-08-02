@@ -23,7 +23,7 @@ final class KoikoiAppTests: XCTestCase {
         // dropTargetsEnabled: ImageRenderer はドロップ受けを禁止マークの
         // プレースホルダとして描くため、スナップショットでは外す
         let view = GameView(model: model, dropTargetsEnabled: false)
-            .frame(width: 520, height: 840)
+            .frame(width: 640, height: 840)
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
 
