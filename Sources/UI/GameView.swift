@@ -38,11 +38,11 @@ public struct GameView: View {
             // （ウィンドウを広げた分は手札とフィールドの間に入る）
             VStack(alignment: .leading, spacing: 12) {
                 header
-                opponentArea
+                opponentArea.layoutPriority(1)
                 Spacer(minLength: 0)
-                fieldArea
+                fieldArea.layoutPriority(1)
                 Spacer(minLength: 0)
-                playerArea
+                playerArea.layoutPriority(1)
             }
             .padding(12)
             // 場札・手札 8 枚が 1 行に収まる最小幅
@@ -111,10 +111,7 @@ public struct GameView: View {
                 Spacer()
             }
             YakuBadges(yakus: model.opponentYaku)
-            CapturedDetail(
-                cards: model.game.captured(for: .opponent),
-                cardWidth: 30,
-                namespace: cardSpace)
+            CapturedDetail(cards: model.game.captured(for: .opponent), cardWidth: 30)
         }
     }
 
@@ -192,11 +189,14 @@ public struct GameView: View {
     private var playerArea: some View {
         VStack(alignment: .leading, spacing: 4) {
             YakuBadges(yakus: model.playerYaku)
-            CapturedDetail(
-                cards: model.game.captured(for: .player),
-                reaches: model.playerReaches,
-                cardWidth: 30,
-                namespace: cardSpace)
+            HStack(alignment: .bottom, spacing: 12) {
+                CapturedDetail(cards: model.game.captured(for: .player), cardWidth: 30)
+                Spacer(minLength: 0)
+                // リーチは右側に寄せて獲得札と分離する
+                if !model.playerReaches.isEmpty {
+                    ReachList(reaches: model.playerReaches)
+                }
+            }
             LazyVGrid(
                 columns: [GridItem(.adaptive(minimum: Self.cardTileWidth, maximum: Self.cardTileWidth), spacing: 8)],
                 spacing: 8

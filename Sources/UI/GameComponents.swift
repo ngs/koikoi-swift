@@ -39,16 +39,11 @@ struct CapturedDetail: View {
     let cards: [Card]
     let reaches: [YakuReach]
     let cardWidth: CGFloat
-    let namespace: Namespace.ID
 
-    init(
-        cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat,
-        namespace: Namespace.ID
-    ) {
+    init(cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat) {
         self.cards = cards
         self.reaches = reaches
         self.cardWidth = cardWidth
-        self.namespace = namespace
     }
 
     private struct Group: Identifiable {
@@ -84,12 +79,12 @@ struct CapturedDetail: View {
                                             .foregroundStyle(.white)
                                     }
                                     .font(.caption2)
+                                    // matchedGeometryEffect は ScrollView 内で
+                                    // サムネイルのジオメトリを壊すため付けない
                                     HStack(spacing: -cardWidth * 0.35) {
                                         ForEach(members) { card in
                                             CardImage(card)
                                                 .frame(width: cardWidth)
-                                                .matchedGeometryEffect(
-                                                    id: card.id, in: namespace)
                                         }
                                     }
                                 }
@@ -123,6 +118,7 @@ struct ReachList: View {
                     GridRow {
                         Text(reach.kind.rawValue)
                             .font(.caption2.bold())
+                            .fixedSize()  // 「雨四光」等を折り返させない
                             // 役バッジ（赤）との混同を避け、白地 + 盤面グリーン文字にする
                             .foregroundStyle(Color(red: 0.10, green: 0.28, blue: 0.20))
                             .padding(.horizontal, 6)
