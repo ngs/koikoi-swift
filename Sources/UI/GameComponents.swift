@@ -3,6 +3,11 @@ import KoikoiCore
 import SwiftUI
 import UniformTypeIdentifiers
 
+extension Color {
+    /// 盤面の背景色（テーブルグリーン）。
+    static let koikoiTable = Color(red: 0.10, green: 0.28, blue: 0.20)
+}
+
 public extension UTType {
     /// アプリ内 D&D 専用の札ペイロード型（外部の一般 JSON を受けないため）。
     static let koikoiCard = UTType(exportedAs: "io.ngs.Koikoi.card")
@@ -120,11 +125,11 @@ struct ReachList: View {
                             .font(.caption2.bold())
                             .fixedSize()  // 「雨四光」等を折り返させない
                             // 役バッジ（赤）との混同を避け、白地 + 盤面グリーン文字にする
-                            .foregroundStyle(Color(red: 0.10, green: 0.28, blue: 0.20))
+                            .foregroundStyle(Color.koikoiTable)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
-                                .white,
+                                .white.opacity(0.7),
                                 in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                             .gridColumnAlignment(.trailing)
                         Text(missingText(for: reach))
@@ -147,6 +152,58 @@ struct ReachList: View {
             return missing.map(\.name).joined(separator: " / ")
         }
         return "あと1枚"
+    }
+}
+
+/// 月・局・両者の得点をまとめたスコアボード（リーチパネルと同じ様式）。
+struct ScoreboardPanel: View {
+    let monthName: String
+    let round: Int
+    let maxRounds: Int
+    let playerScore: Int
+    let opponentScore: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 16) {
+                Text(monthName)
+                    .font(.system(size: 14.5, weight: .bold))  // caption の約 120%
+                Spacer(minLength: 0)
+                Text("\(round)/\(maxRounds)")
+                    .font(.caption2.bold().monospacedDigit())
+                    .foregroundStyle(Color.koikoiTable)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            }
+            Rectangle()
+                .fill(.white.opacity(0.35))
+                .frame(height: 1)
+            HStack(spacing: 10) {
+                scoreTile(score: playerScore, label: "あなた")
+                scoreTile(score: opponentScore, label: "相手")
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(10)
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(.white.opacity(0.45), lineWidth: 1.5)
+        }
+        .fixedSize()
+    }
+
+    private func scoreTile(score: Int, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text("\(score)")
+                .font(.title3.bold().monospacedDigit())
+                .foregroundStyle(Color.koikoiTable)
+                .frame(minWidth: 56)
+                .padding(.vertical, 4)
+                .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            Text(label)
+                .font(.caption2)
+        }
     }
 }
 

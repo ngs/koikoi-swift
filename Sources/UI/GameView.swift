@@ -32,12 +32,11 @@ public struct GameView: View {
 
     public var body: some View {
         ZStack {
-            Color(red: 0.10, green: 0.28, blue: 0.20)
+            Color.koikoiTable
                 .ignoresSafeArea()
             // 相手陣は上端・自陣は下端に固定し、山札・場札はセンターに置く
             // （ウィンドウを広げた分は手札とフィールドの間に入る）
             VStack(alignment: .leading, spacing: 12) {
-                header
                 opponentArea.layoutPriority(1)
                 Spacer(minLength: 0)
                 fieldArea.layoutPriority(1)
@@ -47,6 +46,15 @@ public struct GameView: View {
             .padding(12)
             // 場札・手札 8 枚が 1 行に収まる最小幅
             .frame(minWidth: Self.minBoardWidth)
+        }
+        .overlay(alignment: .topTrailing) {
+            ScoreboardPanel(
+                monthName: Month(rawValue: (model.game.round - 1) % 12)?.oldName ?? "",
+                round: model.game.round,
+                maxRounds: model.game.maxRounds,
+                playerScore: model.game.score(for: .player),
+                opponentScore: model.game.score(for: .opponent))
+            .padding(12)
         }
         .overlay { overlays }
         .animation(.default, value: model.game.field)
@@ -90,17 +98,6 @@ public struct GameView: View {
     }
 
     // MARK: - 区画
-
-    private var header: some View {
-        HStack {
-            Text("\(Month(rawValue: (model.game.round - 1) % 12)?.oldName ?? "") ・ 第\(model.game.round)局/\(model.game.maxRounds)")
-                .font(.headline)
-            Spacer()
-            Text("あなた \(model.game.score(for: .player))文 - 相手 \(model.game.score(for: .opponent))文")
-                .font(.subheadline.monospacedDigit())
-        }
-        .foregroundStyle(.white)
-    }
 
     private var opponentArea: some View {
         VStack(alignment: .leading, spacing: 4) {
