@@ -205,7 +205,8 @@ jobs:
       - name: Get version info
         id: version
         run: |
-          VERSION=$(grep -E 'version *= *"' Project.swift | head -1 | sed -E 's/.*version *= *"([^"]+)".*/\1/' || echo "1.0.0")
+          VERSION=$(grep -E 'version *= *"' Project.swift | head -1 | sed -E 's/.*version *= *"([^"]+)".*/\1/')
+          if [ -z "$VERSION" ]; then VERSION="1.0.0"; fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts

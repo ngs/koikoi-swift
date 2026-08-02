@@ -59,6 +59,8 @@ platform :mac do
   desc 'Create keychain'
   lane :create_ci_keychain do
     create_keychain(
+      name: ENV.fetch('KEYCHAIN_NAME', 'tmp.keychain'),
+      password: ENV.fetch('KEYCHAIN_PASSWORD', 'tmp'),
       default_keychain: true,
       unlock: true,
       timeout: 3600
