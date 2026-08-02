@@ -20,6 +20,34 @@ extension View {
     }
 }
 
+/// 白地から文字を切り抜いたバッジ（背景が文字の形に透ける）。
+struct PunchedBadge: View {
+    let text: String
+    var font: Font = .caption2.bold()
+    var horizontalPadding: CGFloat = 6
+    var verticalPadding: CGFloat = 2
+    var cornerRadius: CGFloat = 5
+    var minWidth: CGFloat?
+
+    var body: some View {
+        Text(text)
+            .font(font)
+            .foregroundStyle(.clear)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .frame(minWidth: minWidth)
+            .background(
+                .white.opacity(0.7),
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay {
+                Text(text)
+                    .font(font)
+                    .blendMode(.destinationOut)
+            }
+            .compositingGroup()
+    }
+}
+
 public extension UTType {
     /// アプリ内 D&D 専用の札ペイロード型（外部の一般 JSON を受けないため）。
     static let koikoiCard = UTType(exportedAs: "io.ngs.Koikoi.card")
@@ -138,16 +166,8 @@ struct ReachList: View {
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 5) {
                 ForEach(reaches, id: \.self) { reach in
                     GridRow {
-                        Text(reach.kind.rawValue)
-                            .font(.caption2.bold())
+                        PunchedBadge(text: reach.kind.rawValue)
                             .fixedSize()  // 「雨四光」等を折り返させない
-                            // 役バッジ（赤）との混同を避け、白地 + 盤面グリーン文字にする
-                            .foregroundStyle(Color.koikoiTable)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                .white.opacity(0.7),
-                                in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                             .gridColumnAlignment(.trailing)
                         Text(missingText(for: reach))
                             .font(.caption)
@@ -186,12 +206,9 @@ struct ScoreboardPanel: View {
                 Text(monthName)
                     .font(.system(size: 14.5, weight: .bold))  // caption の約 120%
                 Spacer(minLength: 0)
-                Text("\(round)/\(maxRounds)")
-                    .font(.caption2.bold().monospacedDigit())
-                    .foregroundStyle(Color.koikoiTable)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                PunchedBadge(
+                    text: "\(round)/\(maxRounds)",
+                    font: .caption2.bold().monospacedDigit())
             }
             Rectangle()
                 .fill(.white.opacity(0.35))
@@ -212,12 +229,12 @@ struct ScoreboardPanel: View {
 
     private func scoreTile(score: Int, label: String) -> some View {
         VStack(spacing: 2) {
-            Text("\(score)")
-                .font(.title3.bold().monospacedDigit())
-                .foregroundStyle(Color.koikoiTable)
-                .frame(minWidth: 56)
-                .padding(.vertical, 4)
-                .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            PunchedBadge(
+                text: "\(score)",
+                font: .title3.bold().monospacedDigit(),
+                verticalPadding: 4,
+                cornerRadius: 8,
+                minWidth: 56)
             Text(label)
                 .font(.caption2)
         }
@@ -364,7 +381,7 @@ struct HandCardView: View {
                             .foregroundStyle(.black)
                             .padding(4)
                             .background(.yellow, in: Circle())
-                            .offset(x: 4, y: -4)
+                            .padding(3)  // 札の内側に収める（隣の札に隠れない）
                     }
                 }
         }
