@@ -1,25 +1,17 @@
 import KoikoiCore
 import SwiftUI
 
-/// タイトル / 対局設定画面。
-public struct StartView: View {
+/// 対局設定画面（新規文書の最初の画面）。
+public struct GameSetupView: View {
     @State private var rounds = 12
     @State private var difficulty: Difficulty = .normal
-    @State private var session: GameViewModel?
+    private let onStart: (Int, Difficulty) -> Void
 
-    public init() {}
-
-    public var body: some View {
-        if let session {
-            GameView(model: session) {
-                self.session = nil
-            }
-        } else {
-            menu
-        }
+    public init(onStart: @escaping (Int, Difficulty) -> Void) {
+        self.onStart = onStart
     }
 
-    private var menu: some View {
+    public var body: some View {
         VStack(spacing: 24) {
             VStack(spacing: 4) {
                 Text("こいこい")
@@ -46,7 +38,7 @@ public struct StartView: View {
             .frame(maxWidth: 420)
 
             Button {
-                session = GameViewModel(rounds: rounds, difficulty: difficulty)
+                onStart(rounds, difficulty)
             } label: {
                 Text("対局開始")
                     .font(.title3.bold())
@@ -59,6 +51,6 @@ public struct StartView: View {
     }
 }
 
-#Preview("タイトル") {
-    StartView()
+#Preview("対局設定") {
+    GameSetupView { _, _ in }
 }

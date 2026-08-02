@@ -64,8 +64,13 @@ public final class GameViewModel {
     private let captureAnimationsEnabled: Bool
 
     public let difficulty: Difficulty
+    /// 対局の乱数シード（記録ファイルからのリプレイに使う）。
+    public let seed: UInt64
     /// AI の手の間に挟む演出ディレイ（テストでは .zero）。
     public var aiStepDelay: Duration
+    /// 手が適用されるたびに呼ばれる（プレイヤー・AI 双方。対局記録用）。
+    public var onMoveApplied: ((Move) -> Void)?
+    private var isReplaying = false
 
     private var rng: GameRandom
     private let engine = ISMCTSEngine(
@@ -82,12 +87,49 @@ public final class GameViewModel {
         self.difficulty = difficulty
         self.aiStepDelay = aiStepDelay
         self.captureAnimationsEnabled = captureAnimationsEnabled
-        var rng = seed.map(GameRandom.init(seed:)) ?? GameRandom()
+        let resolvedSeed = seed ?? UInt64.random(in: .min ... .max)
+        self.seed = resolvedSeed
+        var rng = GameRandom(seed: resolvedSeed)
         var game = Game(rounds: rounds, rng: rng)
         game.startRound()
         _ = rng.next() // 対局用とは別系統の乱数列にする
         self.rng = rng
         simulator = RoundSimulator(game: game)
+        syncAfterMutation()
+    }
+
+    /// 対局記録から復元する（シードから初期化し、全指し手をリプレイ）。
+    public convenience init(
+        record: GameRecord,
+        aiStepDelay: Duration = .milliseconds(800),
+        captureAnimationsEnabled: Bool = true
+    ) {
+        self.init(
+            rounds: record.rounds,
+            difficulty: record.difficulty,
+            seed: record.seed,
+            aiStepDelay: aiStepDelay,
+            captureAnimationsEnabled: captureAnimationsEnabled)
+        replay(record.moves)
+    }
+
+    /// 現時点までの対局を記録として書き出す（moves は文書側が管理する分を渡す）。
+    public func makeRecord(moves: [Move]) -> GameRecord {
+        GameRecord(rounds: game.maxRounds, difficulty: difficulty, seed: seed, moves: moves)
+    }
+
+    private func replay(_ moves: [Move]) {
+        isReplaying = true
+        aiTask?.cancel()
+        aiTask = nil
+        for move in moves {
+            if case .finished = simulator.phase {
+                guard simulator.game.round < simulator.game.maxRounds else { break }
+                advanceRound()
+            }
+            simulator.apply(move)
+        }
+        isReplaying = false
         syncAfterMutation()
     }
 
@@ -344,15 +386,21 @@ public final class GameViewModel {
     /// ラウンド終了画面から次へ進む。
     public func proceedAfterRound() {
         guard case .roundEnd = prompt else { return }
-        var game = simulator.game
+        let game = simulator.game
         if game.round >= game.maxRounds {
             prompt = .matchEnd(winner: matchWinner(of: game))
             return
         }
+        advanceRound()
+        syncAfterMutation()
+    }
+
+    /// 次ラウンドへ進める（親は勝者/継続、得点は累積済み）。
+    private func advanceRound() {
+        var game = simulator.game
         game.round += 1
         game.startRound()
         simulator = RoundSimulator(game: game)
-        syncAfterMutation()
     }
 
     private func matchWinner(of game: Game) -> Seat? {
@@ -366,7 +414,13 @@ public final class GameViewModel {
 
     private func apply(_ move: Move) {
         simulator.apply(move)
+        noteApplied(move)
         syncAfterMutation()
+    }
+
+    private func noteApplied(_ move: Move) {
+        guard !isReplaying else { return }
+        onMoveApplied?(move)
     }
 
     /// シミュレータの状態から次のプロンプトを決め、必要なら AI 手番を開始する。
@@ -411,6 +465,7 @@ public final class GameViewModel {
             withAnimation(.easeInOut(duration: 0.3)) {
                 simulator.apply(move)
             }
+            noteApplied(move)
 
             if case .finished = simulator.phase {
                 break
