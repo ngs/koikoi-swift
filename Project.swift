@@ -47,6 +47,14 @@ let project = Project(
                 "UILaunchScreen": [
                     "UIColorName": "AccentColor",
                     "UIImageRespectsSafeAreaInsets": true
+                ],
+                // アプリ内 D&D 用の札ペイロード型（KoikoiUI の UTType.koikoiCard）
+                "UTExportedTypeDeclarations": [
+                    [
+                        "UTTypeIdentifier": "io.ngs.Koikoi.card",
+                        "UTTypeDescription": "Koikoi card",
+                        "UTTypeConformsTo": ["public.data"]
+                    ]
                 ]
             ]),
             sources: ["Sources/App/**"],

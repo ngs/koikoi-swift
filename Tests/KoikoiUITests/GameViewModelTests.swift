@@ -8,7 +8,7 @@ import Testing
 @MainActor
 @Suite struct GameViewModelTests {
     private func makeModel(seed: UInt64) -> GameViewModel {
-        GameViewModel(rounds: 1, difficulty: .normal, seed: seed, aiStepDelay: .zero)
+        GameViewModel(rounds: 1, difficulty: .normal, seed: seed, aiStepDelay: .zero, captureAnimationsEnabled: false)
     }
 
     /// 相手の手番が終わるのを待つ（上限 2 秒）。
@@ -73,7 +73,7 @@ import Testing
         game.deck = [Card.all[47]]
         game.currentTurn = .player
 
-        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .zero)
+        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .zero, captureAnimationsEnabled: false)
         model.overrideForTesting(game: game)
 
         #expect(model.prompt == .selectHand)
@@ -95,5 +95,77 @@ import Testing
         model.tapHandCard(Card.all[0])
         model.tapFieldCard(Card.all[3])
         #expect(model.game.captured(for: .player).contains(Card.all[3]))
+    }
+
+    /// ドラッグ&ドロップ: マッチする場札への直接ドロップと不正ドロップの拒否。
+    @Test func dragAndDrop() {
+        var game = Game(rounds: 1, rng: GameRandom(seed: 1))
+        game.setHand([Card.all[0], Card.all[47]], for: .player)  // 松に鶴・桐カス
+        game.setHand([Card.all[46]], for: .opponent)
+        game.field = [Card.all[2], Card.all[3], Card.all[4]]  // 松カス×2・梅
+        game.deck = [Card.all[45]]
+        game.currentTurn = .player
+
+        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .zero, captureAnimationsEnabled: false)
+        model.overrideForTesting(game: game)
+
+        // マッチしない場札へのドロップは拒否
+        #expect(!model.dropHandCard(id: 0, on: Card.all[4]))
+        // マッチのある札の空きドロップ（捨て札）は拒否
+        #expect(!model.dropHandCard(id: 0, on: nil))
+        // マッチする場札へは 2 枚マッチでも直接指定できる
+        #expect(model.dropHandCard(id: 0, on: Card.all[3]))
+        #expect(model.game.captured(for: .player).contains(Card.all[3]))
+    }
+
+    /// マッチのない手札は空きへのドロップで捨て札にできる。
+    @Test func dragAndDropDiscard() {
+        var game = Game(rounds: 1, rng: GameRandom(seed: 1))
+        game.setHand([Card.all[47]], for: .player)  // 桐カス（マッチなし）
+        game.setHand([Card.all[46]], for: .opponent)
+        game.field = [Card.all[4]]
+        game.deck = [Card.all[6]]  // 梅カス（捨てた桐を引き札が回収しないように）
+        game.currentTurn = .player
+
+        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .zero, captureAnimationsEnabled: false)
+        model.overrideForTesting(game: game)
+
+        #expect(model.dropHandCard(id: 47, on: nil))
+        #expect(model.game.field.contains(Card.all[47]))
+    }
+
+    /// 十字キー: 手札カーソルの移動・決定と、場札選択での候補巡回。
+    @Test func cursorNavigation() {
+        var game = Game(rounds: 1, rng: GameRandom(seed: 1))
+        game.setHand([Card.all[0], Card.all[47]], for: .player)
+        game.setHand([Card.all[46]], for: .opponent)
+        game.field = [Card.all[4], Card.all[2], Card.all[3]]  // 梅・松カス×2
+        game.deck = [Card.all[45]]
+        game.currentTurn = .player
+
+        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .zero, captureAnimationsEnabled: false)
+        model.overrideForTesting(game: game)
+
+        model.moveCursor(.right)
+        #expect(model.cursor == .hand(0))
+        // カーソル中の手札のマッチが場札ハイライトに反映される（go-koikoi 踏襲）
+        #expect(model.highlightedFieldCards == [Card.all[2], Card.all[3]])
+        model.moveCursor(.right)
+        #expect(model.cursor == .hand(1))
+        model.moveCursor(.right)  // wrap
+        #expect(model.cursor == .hand(0))
+
+        // 決定 → 2 枚マッチなので場札選択へ。カーソルは先頭候補（field[1]）へ
+        model.activateCursor()
+        #expect(model.pendingHandCard == Card.all[0])
+        #expect(model.cursor == .field(1))
+        // 候補内だけを巡回する（梅 field[0] はスキップ）
+        model.moveCursor(.right)
+        #expect(model.cursor == .field(2))
+        model.moveCursor(.right)
+        #expect(model.cursor == .field(1))
+
+        model.activateCursor()
+        #expect(model.game.captured(for: .player).contains(Card.all[2]))
     }
 }

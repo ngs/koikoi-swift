@@ -39,10 +39,11 @@ public struct CardImage: View {
 
     public var body: some View {
         // 札画像はアプリの Assets.xcassets/Cards（メインバンドル）から解決する
+        // （内側のグラフィックが角丸なしのため、外側の角丸は控えめにする）
         Image(card.assetName)
             .resizable()
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
             .accessibilityLabel(Text(card.name))
     }
 }

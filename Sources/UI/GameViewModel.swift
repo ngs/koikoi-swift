@@ -2,6 +2,7 @@ import Foundation
 import KoikoiAI
 import KoikoiCore
 import Observation
+import SwiftUI
 
 /// 対局画面の進行を司るビューモデル。
 /// `RoundSimulator` を 1 ラウンドの状態機械として使い、ラウンドを跨ぐ進行
@@ -25,12 +26,42 @@ public final class GameViewModel {
         case matchEnd(winner: Seat?)
     }
 
+    /// 十字キー操作のカーソル位置。
+    public enum Cursor: Equatable {
+        case hand(Int)
+        case field(Int)
+    }
+
+    /// 十字キーの移動方向。
+    public enum MoveDirection {
+        case up, down, left, right
+    }
+
     public private(set) var simulator: RoundSimulator
     public private(set) var prompt: Prompt = .selectHand
     /// 手札 2 枚マッチの場札選択中に保持する手札。
     public private(set) var pendingHandCard: Card?
-    /// 相手 AI のひとこと（FoundationModels・不可用時は常に nil）。
-    public private(set) var opponentLine: String?
+    /// 十字キー操作のカーソル（キー入力があるまで nil）。
+    public private(set) var cursor: Cursor?
+    /// こいこいダイアログでキー選択中の側（true = こいこい）。
+    public private(set) var dialogKoikoiSelected = true
+    /// ポインタホバー中の手札（macOS/iPad。場札ハイライトの参照元）。
+    public var hoverHandCard: Card?
+
+    /// 獲得アニメーションの進行状態（手札/引き札が場札へ移動中）。
+    public struct CaptureAnimation: Equatable {
+        /// 移動中の札（手札または引き札）。
+        public let movingCard: Card
+        /// がっちゃんこする相手の場札。
+        public let target: Card
+        /// 元の位置（手札/引き札表示）から飛ばすか。
+        /// D&D はドロップ位置に既に札があるため false（その場に出現）。
+        public let fliesFromSource: Bool
+    }
+
+    /// 進行中の獲得アニメーション。この間プレイヤー入力は受け付けない。
+    public private(set) var captureAnimation: CaptureAnimation?
+    private let captureAnimationsEnabled: Bool
 
     public let difficulty: Difficulty
     /// AI の手の間に挟む演出ディレイ（テストでは .zero）。
@@ -39,17 +70,18 @@ public final class GameViewModel {
     private var rng: GameRandom
     private let engine = ISMCTSEngine(
         configuration: ISMCTSConfiguration(iterations: 400))
-    private let persona = OpponentPersona()
     private var aiTask: Task<Void, Never>?
 
     public init(
         rounds: Int = 12,
         difficulty: Difficulty = .normal,
         seed: UInt64? = nil,
-        aiStepDelay: Duration = .milliseconds(800)
+        aiStepDelay: Duration = .milliseconds(800),
+        captureAnimationsEnabled: Bool = true
     ) {
         self.difficulty = difficulty
         self.aiStepDelay = aiStepDelay
+        self.captureAnimationsEnabled = captureAnimationsEnabled
         var rng = seed.map(GameRandom.init(seed:)) ?? GameRandom()
         var game = Game(rounds: rounds, rng: rng)
         game.startRound()
@@ -78,15 +110,60 @@ public final class GameViewModel {
         YakuChecker.checkYaku(captured: game.captured(for: .opponent))
     }
 
+    /// プレイヤーのリーチ（あと 1 枚で成立する役。go-koikoi の mycap 表示と同じ）。
+    public var playerReaches: [YakuReach] {
+        YakuChecker.checkReach(
+            captured: game.captured(for: .player),
+            opponentCaptured: game.captured(for: .opponent))
+    }
+
+    /// 場札ハイライトの参照になっている手札
+    /// （場札選択中の保持札 > キーカーソル > ホバーの優先順）。
+    public var previewHandCard: Card? {
+        if let pendingHandCard { return pendingHandCard }
+        guard prompt == .selectHand else { return nil }
+        if case .hand(let index) = cursor {
+            let hand = game.hand(for: .player)
+            if hand.indices.contains(index) { return hand[index] }
+        }
+        return hoverHandCard
+    }
+
+    /// ハイライトすべき場札（選択候補、なければプレビュー手札のマッチ）。
+    public var highlightedFieldCards: [Card] {
+        if !fieldCandidates.isEmpty { return fieldCandidates }
+        if let preview = previewHandCard {
+            return game.matchingFieldCards(for: preview)
+        }
+        return []
+    }
+
+    /// 場札選択中か（候補以外の場札を減光する）。
+    public var isSelectingField: Bool {
+        if case .selectField = prompt { return true }
+        return false
+    }
+
+    /// 山札から引いた札（場札選択中のみ・表示用）。
+    public var drawnCard: Card? {
+        if case .selectDrawnField(_, let drawn, _) = simulator.phase { return drawn }
+        return nil
+    }
+
     // MARK: - プレイヤー操作
 
     /// 手札をタップ。2 枚マッチなら場札選択へ、それ以外は即座に出す。
     /// 場札選択中は、同じ札で選択解除・別の札で選び直しになる。
     public func tapHandCard(_ card: Card) {
+        guard captureAnimation == nil else { return }
         if let pending = pendingHandCard {
             pendingHandCard = nil
             prompt = .selectHand
-            if card == pending { return }  // トグルで解除
+            if card == pending {
+                // トグルで解除（場札側に残ったカーソルを手札へ戻す）
+                syncCursor()
+                return
+            }
         }
         guard prompt == .selectHand, case .selectHand(.player) = simulator.phase else { return }
         guard game.hand(for: .player).contains(card) else { return }
@@ -95,19 +172,25 @@ public final class GameViewModel {
         if matches.count == 2 {
             pendingHandCard = card
             prompt = .selectField(candidates: matches)
+            syncCursor()
         } else {
-            apply(.playHand(handID: card.id, fieldChoiceID: nil))
+            applyStaged(
+                .playHand(handID: card.id, fieldChoiceID: nil),
+                moving: card, target: matches.first)
         }
     }
 
     /// 場札をタップ（2 枚マッチの選択）。
     public func tapFieldCard(_ card: Card) {
+        guard captureAnimation == nil else { return }
         guard case .selectField(let candidates) = prompt, candidates.contains(card) else { return }
         if let handCard = pendingHandCard {
             pendingHandCard = nil
-            apply(.playHand(handID: handCard.id, fieldChoiceID: card.id))
-        } else if case .selectDrawnField = simulator.phase {
-            apply(.chooseDrawnField(fieldID: card.id))
+            applyStaged(
+                .playHand(handID: handCard.id, fieldChoiceID: card.id),
+                moving: handCard, target: card)
+        } else if case .selectDrawnField(_, let drawn, _) = simulator.phase {
+            applyStaged(.chooseDrawnField(fieldID: card.id), moving: drawn, target: card)
         }
     }
 
@@ -116,15 +199,146 @@ public final class GameViewModel {
         guard pendingHandCard != nil else { return }
         pendingHandCard = nil
         prompt = .selectHand
+        syncCursor()
+    }
+
+    /// 手札をドラッグして場（`target` = 場札、nil = 空きへの捨て札）に落とす。
+    /// - Returns: 合法で適用されたら true（false はドロップ拒否）。
+    @discardableResult
+    public func dropHandCard(id: Int?, on target: Card?) -> Bool {
+        guard captureAnimation == nil else { return false }
+        guard case .selectHand(.player) = simulator.phase else { return false }
+        guard let id, let card = game.hand(for: .player).first(where: { $0.id == id }) else {
+            return false
+        }
+        let matches = game.matchingFieldCards(for: card)
+        if let target {
+            guard matches.contains(target) else { return false }
+            pendingHandCard = nil
+            applyStaged(
+                .playHand(handID: card.id, fieldChoiceID: target.id),
+                moving: card, target: target, fliesFromSource: false)
+        } else {
+            // マッチのある札は場札を指定して落とす（誤操作の捨て札を防ぐ）
+            guard matches.isEmpty else { return false }
+            pendingHandCard = nil
+            apply(.playHand(handID: card.id, fieldChoiceID: nil))
+        }
+        return true
+    }
+
+    /// 獲得を伴う手を 2 段階で適用する:
+    /// 1) 移動札を対象の場札位置へアニメーションさせ（がっちゃんこ）、
+    /// 2) 実際に手を適用して両者を獲得札エリアへ移動させる。
+    /// 獲得がない（target = nil）またはアニメーション無効時は即適用。
+    private func applyStaged(
+        _ move: Move, moving: Card, target: Card?, fliesFromSource: Bool = true
+    ) {
+        guard captureAnimationsEnabled, let target else {
+            apply(move)
+            return
+        }
+        withAnimation(.easeInOut(duration: 0.22)) {
+            captureAnimation = CaptureAnimation(
+                movingCard: moving, target: target, fliesFromSource: fliesFromSource)
+        }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(280))
+            guard let self, self.captureAnimation?.movingCard == moving else { return }
+            withAnimation(.easeInOut(duration: 0.3)) {
+                self.captureAnimation = nil
+                self.apply(move)
+            }
+        }
+    }
+
+    // MARK: - 十字キー操作
+
+    /// カーソルを移動する。
+    public func moveCursor(_ direction: MoveDirection) {
+        switch prompt {
+        case .selectHand:
+            let handCount = game.hand(for: .player).count
+            guard handCount > 0 else { return }
+            let current: Int = if case .hand(let index) = cursor { index } else { -1 }
+            cursor = .hand(step(current, direction: direction, count: handCount))
+        case .selectField(let candidates):
+            guard !candidates.isEmpty else { return }
+            let indices = candidates.compactMap { candidate in
+                game.field.firstIndex(of: candidate)
+            }
+            guard !indices.isEmpty else { return }
+            let position: Int = if case .field(let index) = cursor,
+                let found = indices.firstIndex(of: index) { found } else { -1 }
+            let next = step(position, direction: direction, count: indices.count)
+            cursor = .field(indices[next])
+        case .decideKoikoi:
+            if direction == .left || direction == .right {
+                dialogKoikoiSelected.toggle()
+            }
+        case .opponentTurn, .roundEnd, .matchEnd:
+            break
+        }
+    }
+
+    /// カーソル位置を決定する（Enter / Space）。
+    public func activateCursor() {
+        switch prompt {
+        case .selectHand:
+            if case .hand(let index) = cursor {
+                let hand = game.hand(for: .player)
+                if hand.indices.contains(index) {
+                    tapHandCard(hand[index])
+                }
+            }
+        case .selectField:
+            if case .field(let index) = cursor, game.field.indices.contains(index) {
+                tapFieldCard(game.field[index])
+            }
+        case .decideKoikoi:
+            decide(koikoi: dialogKoikoiSelected)
+        case .roundEnd:
+            proceedAfterRound()
+        case .opponentTurn, .matchEnd:
+            break
+        }
+    }
+
+    /// 前後移動の共通処理（wrap あり。上下も 1 ステップ扱い）。
+    private func step(_ current: Int, direction: MoveDirection, count: Int) -> Int {
+        let delta = (direction == .left || direction == .up) ? -1 : 1
+        if current < 0 {
+            return delta > 0 ? 0 : count - 1
+        }
+        return (current + delta + count) % count
+    }
+
+    /// プロンプト遷移に応じてカーソルを補正する。
+    private func syncCursor() {
+        switch prompt {
+        case .selectHand:
+            if case .hand(let index) = cursor {
+                let handCount = game.hand(for: .player).count
+                cursor = handCount > 0 ? .hand(min(index, handCount - 1)) : nil
+            } else if cursor != nil {
+                cursor = .hand(0)
+            }
+        case .selectField(let candidates):
+            if let first = candidates.first, let index = game.field.firstIndex(of: first) {
+                cursor = .field(index)
+            }
+        case .decideKoikoi:
+            dialogKoikoiSelected = true
+            cursor = nil
+        case .opponentTurn, .roundEnd, .matchEnd:
+            cursor = nil
+        }
     }
 
     /// こいこい（続行）か勝負（終了）を選ぶ。
     public func decide(koikoi: Bool) {
         guard case .decideKoikoi = prompt else { return }
         apply(koikoi ? .koikoi : .shobu)
-        if koikoi {
-            requestPersonaLine(.playerKoikoi)
-        }
     }
 
     /// ラウンド終了画面から次へ進む。
@@ -133,7 +347,6 @@ public final class GameViewModel {
         var game = simulator.game
         if game.round >= game.maxRounds {
             prompt = .matchEnd(winner: matchWinner(of: game))
-            requestPersonaLine(.gameEnd(selfWon: matchWinner(of: game).map { $0 == .opponent }))
             return
         }
         game.round += 1
@@ -173,8 +386,8 @@ public final class GameViewModel {
             prompt = .roundEnd(outcome)
             aiTask?.cancel()
             aiTask = nil
-            announceRoundEnd(outcome)
         }
+        syncCursor()
     }
 
     /// 相手の決定点が続く限り AI で 1 手ずつ進める。
@@ -195,10 +408,9 @@ public final class GameViewModel {
             let move = await computeOpponentMove()
             // 探索の await 中にキャンセル・置き換えされた可能性があるため再確認する
             guard !Task.isCancelled, let move, simulator.seatToMove == .opponent else { return }
-            if case .koikoi = move {
-                requestPersonaLine(personaKoikoiEvent())
+            withAnimation(.easeInOut(duration: 0.3)) {
+                simulator.apply(move)
             }
-            simulator.apply(move)
 
             if case .finished = simulator.phase {
                 break
@@ -231,35 +443,6 @@ public final class GameViewModel {
             return simulator.heuristicMove(difficulty: difficulty, rng: &rng)
         }.value
         return move
-    }
-
-    // MARK: - 人格（台詞）
-
-    private func personaKoikoiEvent() -> PersonaEvent {
-        if case .decideKoikoi(_, let newYaku) = simulator.phase {
-            return .selfKoikoi(newYaku: newYaku, handCount: game.hand(for: .opponent).count)
-        }
-        return .selfKoikoi(newYaku: [], handCount: game.hand(for: .opponent).count)
-    }
-
-    private func announceRoundEnd(_ outcome: RoundOutcome) {
-        switch outcome.winner {
-        case .opponent:
-            requestPersonaLine(.selfShobu(points: outcome.points))
-        case .player:
-            requestPersonaLine(.playerShobu(points: outcome.points))
-        case nil:
-            requestPersonaLine(.roundDrawn)
-        }
-    }
-
-    private func requestPersonaLine(_ event: PersonaEvent) {
-        guard OpponentPersona.isAvailable else { return }
-        let persona = self.persona
-        Task { [weak self] in
-            let line = await persona.comment(on: event)
-            self?.opponentLine = line
-        }
     }
 
     // MARK: - テスト用フック

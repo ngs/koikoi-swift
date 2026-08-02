@@ -20,8 +20,10 @@ final class KoikoiAppTests: XCTestCase {
     func testRenderGameViewSnapshot() throws {
         let model = GameViewModel(
             rounds: 3, difficulty: .normal, seed: 42, aiStepDelay: .seconds(60))
-        let view = GameView(model: model)
-            .frame(width: 520, height: 840)
+        // dropTargetsEnabled: ImageRenderer はドロップ受けを禁止マークの
+        // プレースホルダとして描くため、スナップショットでは外す
+        let view = GameView(model: model, dropTargetsEnabled: false)
+            .frame(width: 640, height: 840)
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
 
