@@ -169,3 +169,52 @@ import Testing
         #expect(model.game.captured(for: .player).contains(Card.all[2]))
     }
 }
+
+extension GameViewModelTests {
+    /// 記録（onMoveApplied）→ JSON 往復 → リプレイで同一盤面が復元される。
+    @Test func recordAndReplayRoundTrip() async throws {
+        let model = makeModel(seed: 5)
+        var moves: [Move] = []
+        model.onMoveApplied = { moves.append($0) }
+
+        // プレイヤーの手を数手進める（AI 手番の完了は毎回待つ）
+        var plays = 0
+        var guardCount = 0
+        while plays < 4, guardCount < 50 {
+            guardCount += 1
+            await waitForPlayerPrompt(model)
+            switch model.prompt {
+            case .selectHand:
+                guard let card = model.game.hand(for: .player).first else { break }
+                model.tapHandCard(card)
+                plays += 1
+            case .selectField(let candidates):
+                model.tapFieldCard(candidates[0])
+            case .decideKoikoi:
+                model.decide(koikoi: false)
+            case .roundEnd, .matchEnd:
+                plays = 4
+            case .opponentTurn:
+                continue
+            }
+        }
+        await waitForPlayerPrompt(model)
+        guard model.prompt != .opponentTurn else {
+            Issue.record("AI turn did not finish")
+            return
+        }
+
+        // JSON 往復
+        let record = model.makeRecord(moves: moves)
+        let data = try JSONEncoder().encode(record)
+        let decoded = try JSONDecoder().decode(GameRecord.self, from: data)
+        #expect(decoded == record)
+        #expect(!record.moves.isEmpty)
+
+        // リプレイ復元
+        let replayed = GameViewModel(
+            record: decoded, aiStepDelay: .zero, captureAnimationsEnabled: false)
+        #expect(replayed.game == model.game)
+        #expect(replayed.prompt == model.prompt)
+    }
+}

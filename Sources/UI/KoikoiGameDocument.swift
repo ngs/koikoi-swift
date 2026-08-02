@@ -69,23 +69,30 @@ public struct GameDocumentView: View {
                         difficulty: difficulty,
                         seed: UInt64.random(in: .min ... .max))
                     document.record = record
+                    // 新規作成した時点で「未保存の変更あり」にする
+                    markEdited()
                     startGame(record: record)
                 }
             }
         }
+        .onAppear { GameCenterService.shared.authenticate() }
     }
 
     private func startGame(record: GameRecord) {
-        GameCenterService.shared.authenticate()
         let model = GameViewModel(record: record)
-        let undoManager = self.undoManager
         model.onMoveApplied = { [weak document] move in
-            guard let document else { return }
-            document.record?.moves.append(move)
-            // 実際の取り消しは提供しないが、変更マークとして登録する
-            // （これが「未保存の変更あり」= 閉じるときの保存プロンプトの根拠になる）
-            undoManager?.registerUndo(withTarget: document) { _ in }
+            guard document != nil else { return }
+            document?.record?.moves.append(move)
+            markEdited()
         }
         self.model = model
+    }
+
+    /// 変更マークを付ける。実際の取り消しは提供しないため、
+    /// undo スタックが際限なく育たないよう 1 段に制限する。
+    private func markEdited() {
+        guard let undoManager else { return }
+        undoManager.levelsOfUndo = 1
+        undoManager.registerUndo(withTarget: document) { _ in }
     }
 }

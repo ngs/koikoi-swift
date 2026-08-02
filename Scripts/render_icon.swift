@@ -31,4 +31,9 @@ svg.draw(in: content, from: .zero, operation: .sourceOver, fraction: 1)
 NSGraphicsContext.restoreGraphicsState()
 
 guard let png = rep.representation(using: .png, properties: [:]) else { exit(1) }
-try! png.write(to: URL(fileURLWithPath: args[2]))
+do {
+    try png.write(to: URL(fileURLWithPath: args[2]))
+} catch {
+    FileHandle.standardError.write(Data("failed to write \(args[2]): \(error)\n".utf8))
+    exit(1)
+}
