@@ -94,6 +94,7 @@ struct CapturedDetail: View {
             }
             if !reaches.isEmpty {
                 ReachList(reaches: reaches)
+                    .padding(.top, 8)
             }
         }
     }
@@ -115,10 +116,12 @@ struct ReachList: View {
                     GridRow {
                         Text(reach.kind.rawValue)
                             .font(.caption2.bold())
+                            // 役バッジ（赤）との混同を避け、白地 + 盤面グリーン文字にする
+                            .foregroundStyle(Color(red: 0.10, green: 0.28, blue: 0.20))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
-                                .red.opacity(0.85),
+                                .white,
                                 in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                             .gridColumnAlignment(.trailing)
                         Text(missingText(for: reach))
