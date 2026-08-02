@@ -12,8 +12,16 @@ public struct GameView: View {
     private let onExit: (() -> Void)?
     /// 札タイルの固定幅（シュリンクさせない）。
     static let cardTileWidth: CGFloat = 64
+    /// 盤面の外周パディング。visionOS はウィンドウの角丸に食い込まないよう広めに取る。
+    static let boardPadding: CGFloat = {
+        #if os(visionOS)
+        return 32
+        #else
+        return 12
+        #endif
+    }()
     /// 手札/場札 8 枚が 1 行に収まる幅（8×64 + 7×8 スペーシング + 左右パディング）。
-    static let minBoardWidth: CGFloat = cardTileWidth * 8 + 8 * 7 + 12 * 2
+    static let minBoardWidth: CGFloat = cardTileWidth * 8 + 8 * 7 + boardPadding * 2
 
     /// D&D の受け皿を張るか。ImageRenderer はドロップ受けのバッキングビューを
     /// 描画できず禁止マークのプレースホルダになるため、スナップショット描画時のみ
@@ -32,8 +40,13 @@ public struct GameView: View {
 
     public var body: some View {
         ZStack {
+            #if os(visionOS)
+            // visionOS はウィンドウのガラスをそのまま透過させる（緑ベタは敷かない）
+            Color.clear
+            #else
             Color.koikoiTable
                 .ignoresSafeArea()
+            #endif
             // 相手陣は上端・自陣は下端に固定し、山札・場札はセンターに置く
             // （ウィンドウを広げた分は手札とフィールドの間に入る）
             VStack(alignment: .leading, spacing: 12) {
@@ -43,7 +56,7 @@ public struct GameView: View {
                 Spacer(minLength: 0)
                 playerArea.layoutPriority(1)
             }
-            .padding(12)
+            .padding(Self.boardPadding)
             // 場札・手札 8 枚が 1 行に収まる最小幅
             .frame(minWidth: Self.minBoardWidth)
         }
@@ -54,7 +67,7 @@ public struct GameView: View {
                 maxRounds: model.game.maxRounds,
                 playerScore: model.game.score(for: .player),
                 opponentScore: model.game.score(for: .opponent))
-            .padding(12)
+            .padding(Self.boardPadding)
         }
         .overlay { overlays }
         .animation(.default, value: model.game.field)
@@ -141,11 +154,13 @@ public struct GameView: View {
                                     .matchedGeometryEffect(
                                         id: animation.movingCard.id, in: cardSpace)
                                     .offset(x: 8, y: -8)
+                                    .lifted(26)  // visionOS: 空中を飛んで重なる
                                     .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
                             } else {
                                 CardImage(animation.movingCard)
                                     .frame(width: Self.cardTileWidth * 0.9)
                                     .offset(x: 8, y: -8)
+                                    .lifted(26)
                                     .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
                                     .transition(.scale(scale: 0.92).combined(with: .opacity))
                             }
@@ -290,6 +305,7 @@ public struct GameView: View {
         .padding(24)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
         .shadow(radius: 12)
+        .lifted(48)  // visionOS: ダイアログは盤の手前に浮かべる
     }
 
     private func roundEndTitle(_ outcome: RoundOutcome) -> String {

@@ -1,0 +1,12 @@
+Koi-Koi, the classic hanafuda card game — with beautifully drawn cards and fluid controls.
+
+Play two-player Koi-Koi under Nintendo rules against a search-based AI with four difficulty levels.
+
+Features:
+- Nintendo-rule scoring: yaku, koi-koi calls, dealer rotation and draws
+- Four AI levels, topped by a determinized ISMCTS search engine
+- Play by tap, drag & drop, or keyboard
+- Yaku progress and "reach" (one card away) indicators make it easy to learn
+- One match = one file: save games, resume and review anytime
+- Game Center leaderboards
+- iPhone, iPad, Mac and Apple Vision Pro

@@ -20,6 +20,10 @@ public final class KoikoiGameDocument: ReferenceFileDocument {
         record = nil
     }
 
+    public init(record: GameRecord) {
+        self.record = record
+    }
+
     public init(configuration: ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents else {
             throw CocoaError(.fileReadCorruptFile)

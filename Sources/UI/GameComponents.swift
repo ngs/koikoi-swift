@@ -8,6 +8,46 @@ extension Color {
     static let koikoiTable = Color(red: 0.10, green: 0.28, blue: 0.20)
 }
 
+extension View {
+    /// visionOS では z 方向に浮かせる（他プラットフォームでは何もしない）。
+    @ViewBuilder
+    func lifted(_ zOffset: CGFloat) -> some View {
+        #if os(visionOS)
+        offset(z: zOffset)
+        #else
+        self
+        #endif
+    }
+}
+
+/// 白地から文字を切り抜いたバッジ（背景が文字の形に透ける）。
+struct PunchedBadge: View {
+    let text: String
+    var font: Font = .caption2.bold()
+    var horizontalPadding: CGFloat = 6
+    var verticalPadding: CGFloat = 2
+    var cornerRadius: CGFloat = 5
+    var minWidth: CGFloat?
+
+    var body: some View {
+        Text(text)
+            .font(font)
+            .foregroundStyle(.clear)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .frame(minWidth: minWidth)
+            .background(
+                .white.opacity(0.7),
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay {
+                Text(text)
+                    .font(font)
+                    .blendMode(.destinationOut)
+            }
+            .compositingGroup()
+    }
+}
+
 public extension UTType {
     /// アプリ内 D&D 専用の札ペイロード型（外部の一般 JSON を受けないため）。
     static let koikoiCard = UTType(exportedAs: "io.ngs.Koikoi.card")
@@ -27,14 +67,19 @@ public struct CardDragPayload: Codable, Transferable, Sendable {
 }
 
 /// 札の裏面（赤札 + ドロップシャドウ）。
+/// スタック表示では個別の影が重なって黒ずむため `shadowed: false` で消せる。
 public struct CardBack: View {
-    public init() {}
+    private let shadowed: Bool
+
+    public init(shadowed: Bool = true) {
+        self.shadowed = shadowed
+    }
 
     public var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(Color(red: 0.72, green: 0.18, blue: 0.15))
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
-            .shadow(color: .black.opacity(0.45), radius: 2, x: 0, y: 1)
+            .shadow(color: .black.opacity(shadowed ? 0.45 : 0), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -121,16 +166,8 @@ struct ReachList: View {
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 5) {
                 ForEach(reaches, id: \.self) { reach in
                     GridRow {
-                        Text(reach.kind.rawValue)
-                            .font(.caption2.bold())
+                        PunchedBadge(text: reach.kind.rawValue)
                             .fixedSize()  // 「雨四光」等を折り返させない
-                            // 役バッジ（赤）との混同を避け、白地 + 盤面グリーン文字にする
-                            .foregroundStyle(Color.koikoiTable)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                .white.opacity(0.7),
-                                in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                             .gridColumnAlignment(.trailing)
                         Text(missingText(for: reach))
                             .font(.caption)
@@ -169,12 +206,9 @@ struct ScoreboardPanel: View {
                 Text(monthName)
                     .font(.system(size: 14.5, weight: .bold))  // caption の約 120%
                 Spacer(minLength: 0)
-                Text("\(round)/\(maxRounds)")
-                    .font(.caption2.bold().monospacedDigit())
-                    .foregroundStyle(Color.koikoiTable)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                PunchedBadge(
+                    text: "\(round)/\(maxRounds)",
+                    font: .caption2.bold().monospacedDigit())
             }
             Rectangle()
                 .fill(.white.opacity(0.35))
@@ -195,12 +229,12 @@ struct ScoreboardPanel: View {
 
     private func scoreTile(score: Int, label: String) -> some View {
         VStack(spacing: 2) {
-            Text("\(score)")
-                .font(.title3.bold().monospacedDigit())
-                .foregroundStyle(Color.koikoiTable)
-                .frame(minWidth: 56)
-                .padding(.vertical, 4)
-                .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            PunchedBadge(
+                text: "\(score)",
+                font: .title3.bold().monospacedDigit(),
+                verticalPadding: 4,
+                cornerRadius: 8,
+                minWidth: 56)
             Text(label)
                 .font(.caption2)
         }
@@ -263,11 +297,14 @@ struct DeckStack: View {
         if remaining > 0 {
             ZStack(alignment: .bottomLeading) {
                 ForEach(0..<remaining, id: \.self) { index in
-                    CardBack()
+                    CardBack(shadowed: false)
                         .frame(width: cardWidth)
                         .offset(x: CGFloat(index) * 0.3, y: -CGFloat(index) * step)
+                        .lifted(CGFloat(index) * 0.6)  // visionOS: 実際に厚みが出る
                 }
             }
+            // 影は 1 枚ごとではなくスタック全体に薄く 1 つだけ落とす
+            .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
             .padding(.top, CGFloat(remaining) * step)
             .padding(.trailing, CGFloat(remaining) * 0.3)
             .animation(.default, value: remaining)
@@ -296,6 +333,7 @@ struct FieldCardView: View {
         Button(action: action) {
             CardImage(card)
                 .opacity(dimmed && !highlighted ? 0.4 : 1)
+                .lifted(highlighted || focused ? 14 : 2)
                 .overlay {
                     if highlighted {
                         PulsingRing()
@@ -325,6 +363,7 @@ struct HandCardView: View {
     var body: some View {
         Button(action: action) {
             CardImage(card)
+                .lifted(selected || focused ? 14 : 2)
                 .overlay {
                     if selected {
                         PulsingRing()
@@ -342,7 +381,7 @@ struct HandCardView: View {
                             .foregroundStyle(.black)
                             .padding(4)
                             .background(.yellow, in: Circle())
-                            .offset(x: 4, y: -4)
+                            .padding(3)  // 札の内側に収める（隣の札に隠れない）
                     }
                 }
         }
