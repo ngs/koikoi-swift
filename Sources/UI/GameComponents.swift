@@ -39,14 +39,19 @@ public struct CardDragPayload: Codable, Transferable, Sendable {
 }
 
 /// 札の裏面（赤札 + ドロップシャドウ）。
+/// スタック表示では個別の影が重なって黒ずむため `shadowed: false` で消せる。
 public struct CardBack: View {
-    public init() {}
+    private let shadowed: Bool
+
+    public init(shadowed: Bool = true) {
+        self.shadowed = shadowed
+    }
 
     public var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(Color(red: 0.72, green: 0.18, blue: 0.15))
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
-            .shadow(color: .black.opacity(0.45), radius: 2, x: 0, y: 1)
+            .shadow(color: .black.opacity(shadowed ? 0.45 : 0), radius: 2, x: 0, y: 1)
     }
 }
 
@@ -275,12 +280,14 @@ struct DeckStack: View {
         if remaining > 0 {
             ZStack(alignment: .bottomLeading) {
                 ForEach(0..<remaining, id: \.self) { index in
-                    CardBack()
+                    CardBack(shadowed: false)
                         .frame(width: cardWidth)
                         .offset(x: CGFloat(index) * 0.3, y: -CGFloat(index) * step)
-                        .lifted(CGFloat(index) * 1.2)  // visionOS: 実際に厚みが出る
+                        .lifted(CGFloat(index) * 0.6)  // visionOS: 実際に厚みが出る
                 }
             }
+            // 影は 1 枚ごとではなくスタック全体に薄く 1 つだけ落とす
+            .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
             .padding(.top, CGFloat(remaining) * step)
             .padding(.trailing, CGFloat(remaining) * 0.3)
             .animation(.default, value: remaining)

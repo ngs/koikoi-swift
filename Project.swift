@@ -39,6 +39,11 @@ let project = Project(
             ),
             infoPlist: .extendingDefault(with: [
                 "ITSAppUsesNonExemptEncryption": .boolean(false),
+                // visionOS の volumetric ウィンドウ等、複数シーンを開けるようにする
+                // （false だと openWindow が黙って失敗する）
+                "UIApplicationSceneManifest": [
+                    "UIApplicationSupportsMultipleScenes": true
+                ],
                 "CFBundleDisplayName": .string("Koikoi"),
                 "CFBundleVersion": .string("$(CURRENT_PROJECT_VERSION)"),
                 "CFBundleShortVersionString": .string("$(MARKETING_VERSION)"),
