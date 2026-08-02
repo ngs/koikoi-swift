@@ -12,8 +12,6 @@ public struct GameView: View {
     static let cardTileWidth: CGFloat = 64
     /// 手札/場札 8 枚が 1 行に収まる幅（8×64 + 7×8 スペーシング + 左右パディング）。
     static let minBoardWidth: CGFloat = cardTileWidth * 8 + 8 * 7 + 12 * 2
-    /// 全区画（相手陣・場 2 行・山札・自陣）が潰れず収まる高さ。
-    static let minBoardHeight: CGFloat = 760
 
     /// D&D の受け皿を張るか。ImageRenderer はドロップ受けのバッキングビューを
     /// 描画できず禁止マークのプレースホルダになるため、スナップショット描画時のみ
@@ -40,8 +38,9 @@ public struct GameView: View {
             playerArea
         }
         .padding(12)
-        // 場札・手札 8 枚が 1 行に、獲得札もシュリンクせず収まる最小寸法
-        .frame(minWidth: Self.minBoardWidth, minHeight: Self.minBoardHeight)
+        // 場札・手札 8 枚が 1 行に収まる最小幅のみ指定
+        // （高さは各区画の自然な最小サイズに任せる）
+        .frame(minWidth: Self.minBoardWidth)
         .background(Color(red: 0.10, green: 0.28, blue: 0.20))
         .overlay { overlays }
         .animation(.default, value: model.game.field)
