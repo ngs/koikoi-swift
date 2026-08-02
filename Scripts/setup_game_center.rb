@@ -4,6 +4,7 @@
 # 使い方: bundle exec ruby Scripts/setup_game_center.rb <ASC App ID>
 # 認証は APP_STORE_CONNECT_API_KEY_* 環境変数（release.yml と同じ）。
 require 'spaceship'
+require 'base64'
 require 'json'
 require 'net/http'
 

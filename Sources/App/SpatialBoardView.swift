@@ -220,7 +220,7 @@ private final class BoardScene {
         let field = game.field
         for (index, card) in field.enumerated() {
             let row = index / 8
-            let rowTotal = row == 0 ? min(field.count, 8) : field.count - 8
+            let rowTotal = min(field.count - row * 8, 8)
             let isCandidate = candidates.contains(card.id)
             poses[card.id] = Pose(
                 position: [rowX(index % 8, of: rowTotal), 0.003, -0.04 + Float(row) * 0.10],
