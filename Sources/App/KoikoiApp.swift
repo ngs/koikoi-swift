@@ -4,6 +4,15 @@ import SwiftUI
 @main
 struct KoikoiApp: App {
     var body: some Scene {
+        #if os(visionOS)
+        // visionOS は DocumentGroup の環境アクション（newDocument 等）が使えないため、
+        // セッション型のメインフロー（設定 → 対局・.koikoi の保存/読込付き）を先頭シーンにする
+        WindowGroup(id: "launcher") {
+            VisionMainView()
+        }
+        .defaultSize(width: 900, height: 760)
+        #endif
+
         // 1 対局 = 1 ファイル（.koikoi）。未保存の変更は閉じるときに
         // OS が保存を促す（Chess.app と同様の文書ベース構成）。
         DocumentGroup(
@@ -21,9 +30,9 @@ struct KoikoiApp: App {
         .defaultSize(width: 0.7, height: 0.45, depth: 0.6, in: .meters)
         #endif
 
-        #if os(visionOS) || os(iOS)
-        // visionOS/iOS は文書未選択時に空のプレースホルダが出るため、
-        // 「新しい対局」から始められるランチャー画面を用意する
+        #if os(iOS)
+        // iOS は文書ブラウザの前に「新しい対局」から始められるランチャーを出す
+        // （visionOS では DocumentGroupLaunchScene が機能しないため上の専用シーンを使う）
         DocumentGroupLaunchScene("こいこい") {
             NewDocumentButton("新しい対局")
         } background: {
