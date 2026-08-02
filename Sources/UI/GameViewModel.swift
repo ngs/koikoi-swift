@@ -143,7 +143,11 @@ public final class GameViewModel {
         if let pending = pendingHandCard {
             pendingHandCard = nil
             prompt = .selectHand
-            if card == pending { return }  // トグルで解除
+            if card == pending {
+                // トグルで解除（場札側に残ったカーソルを手札へ戻す）
+                syncCursor()
+                return
+            }
         }
         guard prompt == .selectHand, case .selectHand(.player) = simulator.phase else { return }
         guard game.hand(for: .player).contains(card) else { return }
@@ -174,6 +178,7 @@ public final class GameViewModel {
         guard pendingHandCard != nil else { return }
         pendingHandCard = nil
         prompt = .selectHand
+        syncCursor()
     }
 
     /// 手札をドラッグして場（`target` = 場札、nil = 空きへの捨て札）に落とす。

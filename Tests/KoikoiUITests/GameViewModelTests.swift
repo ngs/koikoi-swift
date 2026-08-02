@@ -106,7 +106,7 @@ import Testing
         game.deck = [Card.all[45]]
         game.currentTurn = .player
 
-        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .seconds(60))
+        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .zero)
         model.overrideForTesting(game: game)
 
         // マッチしない場札へのドロップは拒否
@@ -127,7 +127,7 @@ import Testing
         game.deck = [Card.all[6]]  // 梅カス（捨てた桐を引き札が回収しないように）
         game.currentTurn = .player
 
-        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .seconds(60))
+        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .zero)
         model.overrideForTesting(game: game)
 
         #expect(model.dropHandCard(id: 47, on: nil))
@@ -143,7 +143,7 @@ import Testing
         game.deck = [Card.all[45]]
         game.currentTurn = .player
 
-        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .seconds(60))
+        let model = GameViewModel(rounds: 1, difficulty: .normal, seed: 1, aiStepDelay: .zero)
         model.overrideForTesting(game: game)
 
         model.moveCursor(.right)

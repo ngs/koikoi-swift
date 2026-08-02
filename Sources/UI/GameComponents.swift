@@ -3,6 +3,11 @@ import KoikoiCore
 import SwiftUI
 import UniformTypeIdentifiers
 
+public extension UTType {
+    /// アプリ内 D&D 専用の札ペイロード型（外部の一般 JSON を受けないため）。
+    static let koikoiCard = UTType(exportedAs: "io.ngs.Koikoi.card")
+}
+
 /// 手札ドラッグのペイロード（アプリ内 D&D 用）。
 public struct CardDragPayload: Codable, Transferable, Sendable {
     public let id: Int
@@ -12,7 +17,7 @@ public struct CardDragPayload: Codable, Transferable, Sendable {
     }
 
     public static var transferRepresentation: some TransferRepresentation {
-        CodableRepresentation(contentType: .json)
+        CodableRepresentation(contentType: .koikoiCard)
     }
 }
 
