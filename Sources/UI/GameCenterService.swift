@@ -59,13 +59,22 @@ public final class GameCenterService {
     }
     #endif
 
-    /// 対局終了を報告する（勝利数と累計文数）。
+    private static let totalWinsKey = "io.ngs.Koikoi.gameCenter.totalWins"
+
+    /// 対局終了を報告する（累計勝利数と 1 対局の最高文数）。
+    /// リーダーボードはベストスコア保持のため、勝利数はローカルで累計してから送る。
     public func reportMatchEnd(playerWon: Bool, playerScore: Int) {
         guard isAuthenticated else { return }
+        var totalWins = UserDefaults.standard.integer(forKey: Self.totalWinsKey)
+        if playerWon {
+            totalWins += 1
+            UserDefaults.standard.set(totalWins, forKey: Self.totalWinsKey)
+        }
+        let winsToReport = totalWins
         Task {
             if playerWon {
                 try? await GKLeaderboard.submitScore(
-                    1, context: 0, player: GKLocalPlayer.local,
+                    winsToReport, context: 0, player: GKLocalPlayer.local,
                     leaderboardIDs: [LeaderboardID.wins])
             }
             try? await GKLeaderboard.submitScore(

@@ -53,6 +53,26 @@ platform :ios do
       ipa: './build/release/ios/Koikoi-iOS.ipa'
     )
   end
+  desc 'Update App Store metadata'
+  lane :deliver_metadata do
+    setup_app_store_connect_api_key
+    deliver(
+      platform: 'ios',
+      force: true,
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      run_precheck_before_submit: false,
+      metadata_path: './fastlane/metadata',
+      # 年齢制限の審査票はアプリ全体の宣言（どのプラットフォームで実行しても反映）
+      app_rating_config_path: './fastlane/metadata/app_store_rating_config.json',
+      app_identifier: 'io.ngs.Koikoi'
+    )
+    upload_app_privacy_details_to_app_store(
+      app_identifier: 'io.ngs.Koikoi',
+      json_path: './fastlane/app_privacy_details.json',
+      skip_json_file_saving: true
+    )
+  end
 end
 
 platform :mac do
@@ -126,6 +146,19 @@ platform :mac do
       skip_metadata: true,
       force: true,
       run_precheck_before_submit: false
+    )
+  end
+  desc 'Update App Store metadata'
+  lane :deliver_metadata do
+    setup_app_store_connect_api_key
+    deliver(
+      platform: 'osx',
+      force: true,
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      run_precheck_before_submit: false,
+      metadata_path: './fastlane/metadata',
+      app_identifier: 'io.ngs.Koikoi'
     )
   end
 end

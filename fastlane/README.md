@@ -50,6 +50,14 @@ Build app for release
 
 Publish app to App Store
 
+### ios deliver_metadata
+
+```sh
+[bundle exec] fastlane ios deliver_metadata
+```
+
+Update App Store metadata
+
 ----
 
 
@@ -86,6 +94,14 @@ Build app for macOS release
 ```
 
 Publish macOS app to App Store
+
+### mac deliver_metadata
+
+```sh
+[bundle exec] fastlane mac deliver_metadata
+```
+
+Update App Store metadata
 
 ----
 
