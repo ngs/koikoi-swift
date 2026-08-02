@@ -48,6 +48,10 @@ public struct GameDocumentView: View {
     @ObservedObject private var document: KoikoiGameDocument
     @Environment(\.undoManager)
     private var undoManager
+    #if os(visionOS)
+    @Environment(\.openWindow)
+    private var openWindow
+    #endif
     @State private var model: GameViewModel?
 
     public init(document: KoikoiGameDocument) {
@@ -58,6 +62,16 @@ public struct GameDocumentView: View {
         Group {
             if let model {
                 GameView(model: model)
+                    #if os(visionOS)
+                    .toolbar {
+                        ToolbarItem(placement: .bottomOrnament) {
+                            Button("空間で遊ぶ", systemImage: "cube") {
+                                SpatialSession.shared.model = model
+                                openWindow(id: "spatialBoard")
+                            }
+                        }
+                    }
+                    #endif
             } else if let record = document.record {
                 // 既存ファイル: 記録をリプレイして再開
                 Color.clear
