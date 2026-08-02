@@ -14,6 +14,8 @@ struct SpatialBoardView: View {
     /// 札の実寸（メートル）。実物の花札とほぼ同じ大きさ。
     private static let cardWidth: Float = 0.057
     private static let cardHeight: Float = 0.087
+    private static let feltColor = UIColor(Color(red: 0.10, green: 0.28, blue: 0.20))
+    private static let cardBackColor = UIColor(Color(red: 0.72, green: 0.18, blue: 0.15))
 
     var body: some View {
         Group {
@@ -68,8 +70,7 @@ struct SpatialBoardView: View {
         // フェルト盤
         let felt = ModelEntity(
             mesh: .generateBox(width: 0.62, height: 0.005, depth: 0.48, cornerRadius: 0.01),
-            materials: [SimpleMaterial(color: UIColor(
-                red: 0.10, green: 0.28, blue: 0.20, alpha: 1), isMetallic: false)])
+            materials: [SimpleMaterial(color: Self.feltColor, isMetallic: false)])
         felt.name = "felt"
         felt.position = [0, -0.0025, 0]
         root.addChild(felt)
@@ -77,9 +78,7 @@ struct SpatialBoardView: View {
         let game = model.game
 
         // 相手の手札（裏向き）
-        layoutRow(
-            root: root, count: game.hand(for: .opponent).count,
-            z: -0.18, faceUp: false, namePrefix: "back", cards: nil)
+        layoutBackRow(root: root, count: game.hand(for: .opponent).count, z: -0.18)
 
         // 場札（2 列まで折り返し）
         let field = game.field
@@ -88,8 +87,7 @@ struct SpatialBoardView: View {
             let row = index / 8
             addCard(
                 root: root, card: card, name: "card:field:\(card.id)",
-                x: rowX(column, of: min(field.count, 8)),
-                z: -0.045 + Float(row) * 0.10,
+                at: (x: rowX(column, of: min(field.count, 8)), z: -0.045 + Float(row) * 0.10),
                 highlighted: model.highlightedFieldCards.contains(card))
         }
 
@@ -98,8 +96,7 @@ struct SpatialBoardView: View {
             mesh: .generateBox(
                 width: Self.cardWidth, height: 0.002 * Float(max(game.deck.count, 1)),
                 depth: Self.cardHeight, cornerRadius: 0.002),
-            materials: [SimpleMaterial(color: UIColor(
-                red: 0.72, green: 0.18, blue: 0.15, alpha: 1), isMetallic: false)])
+            materials: [SimpleMaterial(color: Self.cardBackColor, isMetallic: false)])
         deck.name = "card:deck"
         deck.position = [-0.26, 0.001 * Float(max(game.deck.count, 1)), -0.045]
         root.addChild(deck)
@@ -109,7 +106,7 @@ struct SpatialBoardView: View {
         for (index, card) in hand.enumerated() {
             addCard(
                 root: root, card: card, name: "card:hand:\(card.id)",
-                x: rowX(index, of: hand.count), z: 0.17,
+                at: (x: rowX(index, of: hand.count), z: 0.17),
                 highlighted: model.pendingHandCard == card,
                 tilt: -0.35)
         }
@@ -120,17 +117,14 @@ struct SpatialBoardView: View {
         return (Float(index) - Float(count - 1) / 2) * pitch
     }
 
-    private func layoutRow(
-        root: Entity, count: Int, z: Float, faceUp _: Bool, namePrefix: String, cards _: [Card]?
-    ) {
+    private func layoutBackRow(root: Entity, count: Int, z: Float) {
         for index in 0..<count {
             let back = ModelEntity(
                 mesh: .generateBox(
                     width: Self.cardWidth, height: 0.002, depth: Self.cardHeight,
                     cornerRadius: 0.002),
-                materials: [SimpleMaterial(color: UIColor(
-                    red: 0.72, green: 0.18, blue: 0.15, alpha: 1), isMetallic: false)])
-            back.name = "card:\(namePrefix):\(index)"
+                materials: [SimpleMaterial(color: Self.cardBackColor, isMetallic: false)])
+            back.name = "card:back:\(index)"
             back.position = [rowX(index, of: count), 0.001, z]
             root.addChild(back)
         }
@@ -138,7 +132,7 @@ struct SpatialBoardView: View {
 
     private func addCard(
         root: Entity, card: Card, name: String,
-        x: Float, z: Float, highlighted: Bool, tilt: Float = 0
+        at placement: (x: Float, z: Float), highlighted: Bool, tilt: Float = 0
     ) {
         var material = UnlitMaterial()
         if let texture = try? TextureResource.load(named: card.assetName) {
@@ -150,7 +144,7 @@ struct SpatialBoardView: View {
             mesh: .generatePlane(width: Self.cardWidth, depth: Self.cardHeight, cornerRadius: 0.002),
             materials: [material])
         entity.name = name
-        entity.position = [x, highlighted ? 0.012 : 0.002, z]
+        entity.position = [placement.x, highlighted ? 0.012 : 0.002, placement.z]
         if tilt != 0 {
             entity.orientation = simd_quatf(angle: tilt, axis: [1, 0, 0])
         }
