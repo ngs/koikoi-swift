@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Koikoi アプリアイコン（iOS: フルブリード）。盤面グリーンに札 2 枚 -->
+  <rect width="1024" height="1024" fill="#1A4733"/>
+  <!-- 裏札（赤） -->
+  <g transform="rotate(8 512 512)">
+    <rect x="352" y="200" width="400" height="640" rx="36" fill="#B82E26"/>
+    <rect x="352" y="200" width="400" height="640" rx="36" fill="#000000" opacity="0.12"/>
+  </g>
+  <!-- 表札（芒に月の意匠を簡略化） -->
+  <g transform="rotate(-7 470 540)">
+    <rect x="270" y="230" width="400" height="640" rx="36" fill="#F4EFE4"/>
+    <circle cx="470" cy="430" r="120" fill="#FFFFFF" stroke="#26282F" stroke-width="14"/>
+    <rect x="270" y="230" width="400" height="240" rx="36" fill="#C63C31" opacity="0.92"/>
+    <circle cx="470" cy="430" r="120" fill="#FDFAF2" stroke="#26282F" stroke-width="14"/>
+    <path d="M 270 660 Q 470 560 670 660 L 670 834 Q 670 870 634 870 L 306 870 Q 270 870 270 834 Z" fill="#26332B"/>
+    <rect x="270" y="230" width="400" height="640" rx="36" fill="none" stroke="#26282F" stroke-width="20"/>
+  </g>
+</svg>
