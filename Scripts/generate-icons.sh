@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SVG="$REPO_ROOT/Resources/icon-template.svg"
 OUT="$REPO_ROOT/Resources/Assets.xcassets/AppIcon.appiconset"
+VISION_OUT="$REPO_ROOT/Resources/Assets.xcassets/AppIconVision.solidimagestack"
 
 mkdir -p "$OUT"
 
@@ -49,4 +50,38 @@ cat > "$OUT/Contents.json" <<'EOF'
 }
 EOF
 
-echo "完了: $OUT"
+# visionOS は 3 レイヤーの solidimagestack が必須（背面レイヤーは不透明であること）。
+echo "visionOS 用 (3 レイヤー):"
+rm -rf "$VISION_OUT"
+mkdir -p "$VISION_OUT"
+cat > "$VISION_OUT/Contents.json" <<'EOF'
+{
+  "info" : { "author" : "xcode", "version" : 1 },
+  "layers" : [
+    { "filename" : "Front.solidimagestacklayer" },
+    { "filename" : "Middle.solidimagestacklayer" },
+    { "filename" : "Back.solidimagestacklayer" }
+  ]
+}
+EOF
+
+for layer in Front Middle Back; do
+  lower="$(echo "$layer" | tr '[:upper:]' '[:lower:]')"
+  dir="$VISION_OUT/$layer.solidimagestacklayer"
+  mkdir -p "$dir/Content.imageset"
+  echo '{ "info" : { "author" : "xcode", "version" : 1 } }' > "$dir/Contents.json"
+  cat > "$dir/Content.imageset/Contents.json" <<EOF
+{
+  "images" : [
+    { "filename" : "$layer.png", "idiom" : "vision", "scale" : "2x" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}
+EOF
+  swift "$SCRIPT_DIR/render_icon.swift" \
+    "$REPO_ROOT/Resources/icon-vision-$lower.svg" \
+    "$dir/Content.imageset/$layer.png" 1024
+  echo "  $layer.solidimagestacklayer (1024px)"
+done
+
+echo "完了: $OUT, $VISION_OUT"

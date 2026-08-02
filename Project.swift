@@ -79,6 +79,9 @@ let project = Project(
                         ]
                     ]
                 ],
+                // CFBundleDocumentTypes を宣言するアプリは開き方の宣言が必須
+                // （無いとアップロード時に警告 90737 が出る）
+                "LSSupportsOpeningDocumentsInPlace": .boolean(true),
                 "CFBundleDocumentTypes": [
                     [
                         "CFBundleTypeName": "Koikoi game",
@@ -102,7 +105,16 @@ let project = Project(
                 .package(product: "KoikoiCore"),
                 .package(product: "KoikoiAI"),
                 .package(product: "KoikoiUI")
-            ]
+            ],
+            // visionOS は 3 レイヤーの solidimagestack が必須のため別アセットを使う
+            // （未設定だと CFBundleIcons.CFBundlePrimaryIcon 欠落でアップロードが 90970 で失敗する）。
+            // Tuist がターゲットへ無条件の ASSETCATALOG_COMPILER_APPICON_NAME を自動生成するため、
+            // プロジェクトレベルではなくターゲットレベルで上書きする必要がある。
+            settings: .settings(base: [
+                "ASSETCATALOG_COMPILER_APPICON_NAME": .string("AppIcon"),
+                "ASSETCATALOG_COMPILER_APPICON_NAME[sdk=xros*]": .string("AppIconVision"),
+                "ASSETCATALOG_COMPILER_APPICON_NAME[sdk=xrsimulator*]": .string("AppIconVision")
+            ])
         ),
         .target(
             name: "KoikoiTests",

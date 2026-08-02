@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- visionOS アイコン 中間レイヤー: 裏札（赤） -->
+  <g transform="rotate(8 512 512)">
+    <rect x="352" y="200" width="400" height="640" rx="36" fill="#B82E26"/>
+    <rect x="352" y="200" width="400" height="640" rx="36" fill="#000000" opacity="0.12"/>
+  </g>
+</svg>
