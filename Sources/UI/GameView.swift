@@ -32,12 +32,14 @@ public struct GameView: View {
         ZStack {
             Color(red: 0.10, green: 0.28, blue: 0.20)
                 .ignoresSafeArea()
-            // 盤面は余白を挟まない密なブロックとして中央に置く
-            // （ウィンドウを広げた分は外周マージンになる）
+            // 相手陣は上端・自陣は下端に固定し、山札・場札はセンターに置く
+            // （ウィンドウを広げた分は手札とフィールドの間に入る）
             VStack(alignment: .leading, spacing: 12) {
                 header
                 opponentArea
+                Spacer(minLength: 0)
                 fieldArea
+                Spacer(minLength: 0)
                 playerArea
             }
             .padding(12)
