@@ -25,6 +25,11 @@ let project = Project(
             // the Release configuration to the match profiles.
             "CODE_SIGN_STYLE": .string("Automatic"),
             "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
+            // visionOS は 3 レイヤーの solidimagestack が必須のため別アセットを使う
+            // （未設定だと CFBundleIcons.CFBundlePrimaryIcon 欠落でアップロードが 90970 で失敗する）
+            "ASSETCATALOG_COMPILER_APPICON_NAME": .string("AppIcon"),
+            "ASSETCATALOG_COMPILER_APPICON_NAME[sdk=xros*]": .string("AppIconVision"),
+            "ASSETCATALOG_COMPILER_APPICON_NAME[sdk=xrsimulator*]": .string("AppIconVision"),
             // visionOS は volumetric ウィンドウのみのため、既定シーンのロールを
             // SDK 別に切り替える（Info.plist の $(KOIKOI_DEFAULT_SCENE_ROLE) で参照）
             "KOIKOI_DEFAULT_SCENE_ROLE": .string("UIWindowSceneSessionRoleApplication"),
@@ -79,6 +84,9 @@ let project = Project(
                         ]
                     ]
                 ],
+                // CFBundleDocumentTypes を宣言するアプリは開き方の宣言が必須
+                // （無いとアップロード時に警告 90737 が出る）
+                "LSSupportsOpeningDocumentsInPlace": .boolean(true),
                 "CFBundleDocumentTypes": [
                     [
                         "CFBundleTypeName": "Koikoi game",
