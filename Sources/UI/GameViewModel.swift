@@ -54,6 +54,9 @@ public final class GameViewModel {
         public let movingCard: Card
         /// がっちゃんこする相手の場札。
         public let target: Card
+        /// 元の位置（手札/引き札表示）から飛ばすか。
+        /// D&D はドロップ位置に既に札があるため false（その場に出現）。
+        public let fliesFromSource: Bool
     }
 
     /// 進行中の獲得アニメーション。この間プレイヤー入力は受け付けない。
@@ -214,7 +217,7 @@ public final class GameViewModel {
             pendingHandCard = nil
             applyStaged(
                 .playHand(handID: card.id, fieldChoiceID: target.id),
-                moving: card, target: target)
+                moving: card, target: target, fliesFromSource: false)
         } else {
             // マッチのある札は場札を指定して落とす（誤操作の捨て札を防ぐ）
             guard matches.isEmpty else { return false }
@@ -228,13 +231,16 @@ public final class GameViewModel {
     /// 1) 移動札を対象の場札位置へアニメーションさせ（がっちゃんこ）、
     /// 2) 実際に手を適用して両者を獲得札エリアへ移動させる。
     /// 獲得がない（target = nil）またはアニメーション無効時は即適用。
-    private func applyStaged(_ move: Move, moving: Card, target: Card?) {
+    private func applyStaged(
+        _ move: Move, moving: Card, target: Card?, fliesFromSource: Bool = true
+    ) {
         guard captureAnimationsEnabled, let target else {
             apply(move)
             return
         }
         withAnimation(.easeInOut(duration: 0.22)) {
-            captureAnimation = CaptureAnimation(movingCard: moving, target: target)
+            captureAnimation = CaptureAnimation(
+                movingCard: moving, target: target, fliesFromSource: fliesFromSource)
         }
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(280))

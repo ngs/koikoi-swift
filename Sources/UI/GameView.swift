@@ -132,13 +132,23 @@ public struct GameView: View {
                             },
                             on: card)
                         .matchedGeometryEffect(id: card.id, in: cardSpace)
-                        // がっちゃんこ中: 移動札を対象の場札に重ねて表示
+                        // がっちゃんこ中: 移動札を対象の場札に重ねて表示。
+                        // タップ/キー操作は元の位置から飛ばし、D&D はドロップ位置に出現
                         if let animation = model.captureAnimation, animation.target == card {
-                            CardImage(animation.movingCard)
-                                .frame(width: Self.cardTileWidth * 0.9)
-                                .matchedGeometryEffect(id: animation.movingCard.id, in: cardSpace)
-                                .offset(x: 8, y: -8)
-                                .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
+                            if animation.fliesFromSource {
+                                CardImage(animation.movingCard)
+                                    .frame(width: Self.cardTileWidth * 0.9)
+                                    .matchedGeometryEffect(
+                                        id: animation.movingCard.id, in: cardSpace)
+                                    .offset(x: 8, y: -8)
+                                    .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
+                            } else {
+                                CardImage(animation.movingCard)
+                                    .frame(width: Self.cardTileWidth * 0.9)
+                                    .offset(x: 8, y: -8)
+                                    .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
+                                    .transition(.scale(scale: 0.92).combined(with: .opacity))
+                            }
                         }
                     }
                     .zIndex(model.captureAnimation?.target == card ? 1 : 0)
