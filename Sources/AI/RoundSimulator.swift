@@ -4,7 +4,7 @@ import KoikoiCore
 /// ラウンド進行上の決定点で選べる 1 手。
 /// 選択の発生しない進行（山札 0/1/3 枚マッチの解決など）は
 /// `RoundSimulator` が自動で進めるため、ここには現れない。
-public enum Move: Sendable, Hashable {
+public enum Move: Sendable, Hashable, Codable {
     /// 手札を出す（2 枚マッチ時は場札の選択も含む）。
     case playHand(handID: Int, fieldChoiceID: Int?)
     /// 山札から引いた札が 2 枚マッチしたときの場札選択。

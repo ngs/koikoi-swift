@@ -48,17 +48,35 @@ let project = Project(
                     "UIColorName": "AccentColor",
                     "UIImageRespectsSafeAreaInsets": true
                 ],
-                // アプリ内 D&D 用の札ペイロード型（KoikoiUI の UTType.koikoiCard）
+                // アプリ内 D&D 用の札ペイロード型（KoikoiUI の UTType.koikoiCard）と
+                // 対局記録ファイル（.koikoi = UTType.koikoiGame）
                 "UTExportedTypeDeclarations": [
                     [
                         "UTTypeIdentifier": "io.ngs.Koikoi.card",
                         "UTTypeDescription": "Koikoi card",
                         "UTTypeConformsTo": ["public.data"]
+                    ],
+                    [
+                        "UTTypeIdentifier": "io.ngs.Koikoi.game",
+                        "UTTypeDescription": "Koikoi game",
+                        "UTTypeConformsTo": ["public.json"],
+                        "UTTypeTagSpecification": [
+                            "public.filename-extension": ["koikoi"]
+                        ]
+                    ]
+                ],
+                "CFBundleDocumentTypes": [
+                    [
+                        "CFBundleTypeName": "Koikoi game",
+                        "CFBundleTypeRole": "Editor",
+                        "LSHandlerRank": "Owner",
+                        "LSItemContentTypes": ["io.ngs.Koikoi.game"]
                     ]
                 ]
             ]),
             sources: ["Sources/App/**"],
             resources: ["Resources/**"],
+            entitlements: "Resources/Koikoi.entitlements",
             scripts: [
                 .pre(
                     script: "${SRCROOT}/Scripts/swiftlint-fix-build-phase.sh",
