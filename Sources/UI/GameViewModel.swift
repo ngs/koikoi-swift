@@ -2,6 +2,7 @@ import Foundation
 import KoikoiAI
 import KoikoiCore
 import Observation
+import SwiftUI
 
 /// 対局画面の進行を司るビューモデル。
 /// `RoundSimulator` を 1 ラウンドの状態機械として使い、ラウンドを跨ぐ進行
@@ -47,6 +48,18 @@ public final class GameViewModel {
     /// ポインタホバー中の手札（macOS/iPad。場札ハイライトの参照元）。
     public var hoverHandCard: Card?
 
+    /// 獲得アニメーションの進行状態（手札/引き札が場札へ移動中）。
+    public struct CaptureAnimation: Equatable {
+        /// 移動中の札（手札または引き札）。
+        public let movingCard: Card
+        /// がっちゃんこする相手の場札。
+        public let target: Card
+    }
+
+    /// 進行中の獲得アニメーション。この間プレイヤー入力は受け付けない。
+    public private(set) var captureAnimation: CaptureAnimation?
+    private let captureAnimationsEnabled: Bool
+
     public let difficulty: Difficulty
     /// AI の手の間に挟む演出ディレイ（テストでは .zero）。
     public var aiStepDelay: Duration
@@ -60,10 +73,12 @@ public final class GameViewModel {
         rounds: Int = 12,
         difficulty: Difficulty = .normal,
         seed: UInt64? = nil,
-        aiStepDelay: Duration = .milliseconds(800)
+        aiStepDelay: Duration = .milliseconds(800),
+        captureAnimationsEnabled: Bool = true
     ) {
         self.difficulty = difficulty
         self.aiStepDelay = aiStepDelay
+        self.captureAnimationsEnabled = captureAnimationsEnabled
         var rng = seed.map(GameRandom.init(seed:)) ?? GameRandom()
         var game = Game(rounds: rounds, rng: rng)
         game.startRound()
@@ -137,6 +152,7 @@ public final class GameViewModel {
     /// 手札をタップ。2 枚マッチなら場札選択へ、それ以外は即座に出す。
     /// 場札選択中は、同じ札で選択解除・別の札で選び直しになる。
     public func tapHandCard(_ card: Card) {
+        guard captureAnimation == nil else { return }
         if let pending = pendingHandCard {
             pendingHandCard = nil
             prompt = .selectHand
@@ -155,18 +171,23 @@ public final class GameViewModel {
             prompt = .selectField(candidates: matches)
             syncCursor()
         } else {
-            apply(.playHand(handID: card.id, fieldChoiceID: nil))
+            applyStaged(
+                .playHand(handID: card.id, fieldChoiceID: nil),
+                moving: card, target: matches.first)
         }
     }
 
     /// 場札をタップ（2 枚マッチの選択）。
     public func tapFieldCard(_ card: Card) {
+        guard captureAnimation == nil else { return }
         guard case .selectField(let candidates) = prompt, candidates.contains(card) else { return }
         if let handCard = pendingHandCard {
             pendingHandCard = nil
-            apply(.playHand(handID: handCard.id, fieldChoiceID: card.id))
-        } else if case .selectDrawnField = simulator.phase {
-            apply(.chooseDrawnField(fieldID: card.id))
+            applyStaged(
+                .playHand(handID: handCard.id, fieldChoiceID: card.id),
+                moving: handCard, target: card)
+        } else if case .selectDrawnField(_, let drawn, _) = simulator.phase {
+            applyStaged(.chooseDrawnField(fieldID: card.id), moving: drawn, target: card)
         }
     }
 
@@ -182,6 +203,7 @@ public final class GameViewModel {
     /// - Returns: 合法で適用されたら true（false はドロップ拒否）。
     @discardableResult
     public func dropHandCard(id: Int?, on target: Card?) -> Bool {
+        guard captureAnimation == nil else { return false }
         guard case .selectHand(.player) = simulator.phase else { return false }
         guard let id, let card = game.hand(for: .player).first(where: { $0.id == id }) else {
             return false
@@ -190,7 +212,9 @@ public final class GameViewModel {
         if let target {
             guard matches.contains(target) else { return false }
             pendingHandCard = nil
-            apply(.playHand(handID: card.id, fieldChoiceID: target.id))
+            applyStaged(
+                .playHand(handID: card.id, fieldChoiceID: target.id),
+                moving: card, target: target)
         } else {
             // マッチのある札は場札を指定して落とす（誤操作の捨て札を防ぐ）
             guard matches.isEmpty else { return false }
@@ -198,6 +222,28 @@ public final class GameViewModel {
             apply(.playHand(handID: card.id, fieldChoiceID: nil))
         }
         return true
+    }
+
+    /// 獲得を伴う手を 2 段階で適用する:
+    /// 1) 移動札を対象の場札位置へアニメーションさせ（がっちゃんこ）、
+    /// 2) 実際に手を適用して両者を獲得札エリアへ移動させる。
+    /// 獲得がない（target = nil）またはアニメーション無効時は即適用。
+    private func applyStaged(_ move: Move, moving: Card, target: Card?) {
+        guard captureAnimationsEnabled, let target else {
+            apply(move)
+            return
+        }
+        withAnimation(.easeInOut(duration: 0.22)) {
+            captureAnimation = CaptureAnimation(movingCard: moving, target: target)
+        }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(280))
+            guard let self, self.captureAnimation?.movingCard == moving else { return }
+            withAnimation(.easeInOut(duration: 0.3)) {
+                self.captureAnimation = nil
+                self.apply(move)
+            }
+        }
     }
 
     // MARK: - 十字キー操作
@@ -356,7 +402,9 @@ public final class GameViewModel {
             let move = await computeOpponentMove()
             // 探索の await 中にキャンセル・置き換えされた可能性があるため再確認する
             guard !Task.isCancelled, let move, simulator.seatToMove == .opponent else { return }
-            simulator.apply(move)
+            withAnimation(.easeInOut(duration: 0.3)) {
+                simulator.apply(move)
+            }
 
             if case .finished = simulator.phase {
                 break

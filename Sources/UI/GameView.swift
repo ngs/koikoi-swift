@@ -7,6 +7,8 @@ import SwiftUI
 public struct GameView: View {
     @State private var model: GameViewModel
     @FocusState private var boardFocused: Bool
+    /// 札の獲得アニメーション用（ゾーン間の移動を matchedGeometryEffect で結ぶ）。
+    @Namespace private var cardSpace
     private let onExit: (() -> Void)?
     /// 札タイルの固定幅（シュリンクさせない）。
     static let cardTileWidth: CGFloat = 64
@@ -109,7 +111,10 @@ public struct GameView: View {
                 Spacer()
             }
             YakuBadges(yakus: model.opponentYaku)
-            CapturedDetail(cards: model.game.captured(for: .opponent), cardWidth: 30)
+            CapturedDetail(
+                cards: model.game.captured(for: .opponent),
+                cardWidth: 30,
+                namespace: cardSpace)
         }
     }
 
@@ -120,17 +125,29 @@ public struct GameView: View {
                 spacing: 8
             ) {
                 ForEach(Array(model.game.field.enumerated()), id: \.element.id) { index, card in
-                    cardDropTarget(
-                        FieldCardView(
-                            card: card,
-                            highlighted: model.highlightedFieldCards.contains(card),
-                            focused: model.cursor == .field(index),
-                            dimmed: model.isSelectingField && !model.fieldCandidates.contains(card),
-                            tappable: model.fieldCandidates.contains(card)
-                        ) {
-                            model.tapFieldCard(card)
-                        },
-                        on: card)
+                    ZStack(alignment: .topTrailing) {
+                        cardDropTarget(
+                            FieldCardView(
+                                card: card,
+                                highlighted: model.highlightedFieldCards.contains(card),
+                                focused: model.cursor == .field(index),
+                                dimmed: model.isSelectingField && !model.fieldCandidates.contains(card),
+                                tappable: model.fieldCandidates.contains(card)
+                            ) {
+                                model.tapFieldCard(card)
+                            },
+                            on: card)
+                        .matchedGeometryEffect(id: card.id, in: cardSpace)
+                        // がっちゃんこ中: 移動札を対象の場札に重ねて表示
+                        if let animation = model.captureAnimation, animation.target == card {
+                            CardImage(animation.movingCard)
+                                .frame(width: Self.cardTileWidth * 0.9)
+                                .matchedGeometryEffect(id: animation.movingCard.id, in: cardSpace)
+                                .offset(x: 8, y: -8)
+                                .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
+                        }
+                    }
+                    .zIndex(model.captureAnimation?.target == card ? 1 : 0)
                 }
             }
             .background {
@@ -139,13 +156,14 @@ public struct GameView: View {
             }
             HStack(spacing: 12) {
                 DeckStack(remaining: model.game.deck.count)
-                if let drawn = model.drawnCard {
+                if let drawn = model.drawnCard, model.captureAnimation?.movingCard != drawn {
                     HStack(spacing: 4) {
                         Text("引いた札:")
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.8))
                         CardImage(drawn)
                             .frame(width: 30)
+                            .matchedGeometryEffect(id: drawn.id, in: cardSpace)
                     }
                 }
                 Spacer()
@@ -177,12 +195,18 @@ public struct GameView: View {
             CapturedDetail(
                 cards: model.game.captured(for: .player),
                 reaches: model.playerReaches,
-                cardWidth: 30)
+                cardWidth: 30,
+                namespace: cardSpace)
             LazyVGrid(
                 columns: [GridItem(.adaptive(minimum: Self.cardTileWidth, maximum: Self.cardTileWidth), spacing: 8)],
                 spacing: 8
             ) {
-                ForEach(Array(model.game.hand(for: .player).enumerated()), id: \.element.id) { index, card in
+                // がっちゃんこ中の札は手札からは消し、場札側で描画する
+                ForEach(
+                    Array(model.game.hand(for: .player).enumerated())
+                        .filter { $0.element != model.captureAnimation?.movingCard },
+                    id: \.element.id
+                ) { index, card in
                     HandCardView(
                         card: card,
                         matchCount: model.game.matchingFieldCards(for: card).count,
@@ -192,6 +216,7 @@ public struct GameView: View {
                     ) {
                         model.tapHandCard(card)
                     }
+                    .matchedGeometryEffect(id: card.id, in: cardSpace)
                     #if os(macOS)
                     .onHover { hovering in
                         model.hoverHandCard = hovering ? card : nil

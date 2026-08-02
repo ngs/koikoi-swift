@@ -39,11 +39,16 @@ struct CapturedDetail: View {
     let cards: [Card]
     let reaches: [YakuReach]
     let cardWidth: CGFloat
+    let namespace: Namespace.ID
 
-    init(cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat) {
+    init(
+        cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat,
+        namespace: Namespace.ID
+    ) {
         self.cards = cards
         self.reaches = reaches
         self.cardWidth = cardWidth
+        self.namespace = namespace
     }
 
     private struct Group: Identifiable {
@@ -83,6 +88,8 @@ struct CapturedDetail: View {
                                         ForEach(members) { card in
                                             CardImage(card)
                                                 .frame(width: cardWidth)
+                                                .matchedGeometryEffect(
+                                                    id: card.id, in: namespace)
                                         }
                                     }
                                 }
