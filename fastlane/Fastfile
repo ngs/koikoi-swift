@@ -1,0 +1,175 @@
+# frozen_string_literal: true
+
+# tides-swift (Shiomi) と同運用の App Store リリースレーン。
+# 認証は App Store Connect API キー（環境変数）+ match (git) を使う。
+
+default_platform(:ios)
+
+platform :ios do
+  desc 'Match App Store Provisioning Profiles'
+  lane :release_match do
+    xcode_select ENV['XCODE_PATH'] if ENV['XCODE_PATH']
+    # Authenticates match against the Developer Portal without an Apple ID.
+    setup_app_store_connect_api_key
+    match type: 'appstore',
+          app_identifier: ['io.ngs.Koikoi'],
+          readonly: ENV['MATCH_READONLY'] == 'true'
+  end
+
+  desc 'Build app for release'
+  lane :release_build do
+    xcode_select ENV['XCODE_PATH'] if ENV['XCODE_PATH']
+    release_match
+
+    profile_name = ENV['sigh_io.ngs.Koikoi_appstore_profile-name'] || 'match AppStore io.ngs.Koikoi'
+    update_code_signing_settings(
+      profile_name: profile_name,
+      bundle_identifier: 'io.ngs.Koikoi',
+      use_automatic_signing: false,
+      code_sign_identity: 'Apple Distribution',
+      targets: ['Koikoi'],
+      build_configurations: %w[Release],
+      path: 'Koikoi.xcodeproj'
+    )
+
+    # Let gym detect iOS from the destination instead of forcing the SDK.
+    require_relative 'patches/gym_module_patch'
+
+    build_app(
+      export_method: 'app-store',
+      scheme: 'Koikoi',
+      destination: 'generic/platform=iOS',
+      output_directory: './build/release/ios',
+      output_name: 'Koikoi-iOS'
+    )
+  end
+
+  desc 'Publish app to App Store'
+  lane :release_upload do
+    setup_app_store_connect_api_key
+
+    pilot(
+      skip_waiting_for_build_processing: true,
+      ipa: './build/release/ios/Koikoi-iOS.ipa'
+    )
+  end
+end
+
+platform :mac do
+  desc 'Create keychain'
+  lane :create_ci_keychain do
+    create_keychain(
+      default_keychain: true,
+      unlock: true,
+      timeout: 3600
+    )
+  end
+
+  desc 'Match App Store Provisioning Profiles for macOS'
+  lane :release_match do
+    xcode_select ENV['XCODE_PATH'] if ENV['XCODE_PATH']
+    setup_app_store_connect_api_key
+    match(
+      type: 'appstore',
+      app_identifier: ['io.ngs.Koikoi'],
+      platform: 'macos',
+      readonly: ENV['MATCH_READONLY'] == 'true'
+    )
+    # Get Mac Installer Distribution certificate for PKG creation
+    match(
+      type: 'appstore',
+      app_identifier: 'io.ngs.Koikoi',
+      platform: 'macos',
+      additional_cert_types: 'mac_installer_distribution',
+      readonly: ENV['MATCH_READONLY'] == 'true'
+    )
+  end
+
+  desc 'Build app for macOS release'
+  lane :release_build do
+    xcode_select ENV['XCODE_PATH'] if ENV['XCODE_PATH']
+    release_match
+
+    profile_name = ENV['sigh_io.ngs.Koikoi_appstore_macos_profile-name'] ||
+                   'match AppStore io.ngs.Koikoi macos'
+    update_code_signing_settings(
+      profile_name: profile_name,
+      bundle_identifier: 'io.ngs.Koikoi',
+      use_automatic_signing: false,
+      code_sign_identity: 'Apple Distribution',
+      targets: ['Koikoi'],
+      build_configurations: %w[Release],
+      path: 'Koikoi.xcodeproj'
+    )
+
+    build_app(
+      export_method: 'app-store',
+      scheme: 'Koikoi',
+      destination: 'generic/platform=macOS',
+      output_directory: './build/release/mac',
+      output_name: 'Koikoi-macOS',
+      sdk: 'macosx'
+    )
+  end
+
+  desc 'Publish macOS app to App Store'
+  lane :release_upload do
+    setup_app_store_connect_api_key
+
+    upload_to_app_store(
+      app_identifier: 'io.ngs.Koikoi',
+      platform: 'osx',
+      pkg: './build/release/mac/Koikoi-macOS.pkg',
+      skip_screenshots: true,
+      skip_metadata: true,
+      force: true,
+      run_precheck_before_submit: false
+    )
+  end
+end
+
+platform :visionos do
+  desc 'Match App Store Provisioning Profiles for visionOS (alias to iOS)'
+  lane :release_match do
+    # visionOS uses iOS provisioning profiles, so just call the iOS lane
+    Fastlane::LaneManager.cruise_lane('ios', 'release_match')
+  end
+
+  desc 'Build app for visionOS release'
+  lane :release_build do
+    xcode_select ENV['XCODE_PATH'] if ENV['XCODE_PATH']
+    release_match
+
+    profile_name = ENV['sigh_io.ngs.Koikoi_appstore_profile-name'] || 'match AppStore io.ngs.Koikoi'
+    update_code_signing_settings(
+      profile_name: profile_name,
+      bundle_identifier: 'io.ngs.Koikoi',
+      use_automatic_signing: false,
+      code_sign_identity: 'Apple Distribution',
+      targets: ['Koikoi'],
+      build_configurations: %w[Release],
+      path: 'Koikoi.xcodeproj'
+    )
+
+    require_relative 'patches/gym_module_patch'
+
+    build_app(
+      export_method: 'app-store',
+      scheme: 'Koikoi',
+      destination: 'generic/platform=visionOS',
+      output_directory: './build/release/visionos',
+      output_name: 'Koikoi-visionOS',
+      sdk: 'xros'
+    )
+  end
+
+  desc 'Publish visionOS app to App Store'
+  lane :release_upload do
+    setup_app_store_connect_api_key
+
+    pilot(
+      skip_waiting_for_build_processing: true,
+      ipa: './build/release/visionos/Koikoi-visionOS.ipa'
+    )
+  end
+end
