@@ -11,7 +11,12 @@ struct KoikoiApp: App {
             SpatialBoardView()
         }
         .windowStyle(.volumetric)
+        .volumeWorldAlignment(.gravityAligned)
         .defaultSize(width: 0.9, height: 0.5, depth: 0.8, in: .meters)
+        // 起動時は目の高さではなく、正面やや下（卓上の高さ）に出して見下ろせるようにする
+        .defaultWindowPlacement { _, _ in
+            WindowPlacement(.utilityPanel)
+        }
         #else
         // 1 対局 = 1 ファイル（.koikoi）。未保存の変更は閉じるときに
         // OS が保存を促す（Chess.app と同様の文書ベース構成）。

@@ -24,7 +24,14 @@ let project = Project(
             // Development builds provision themselves; the release lanes switch
             // the Release configuration to the match profiles.
             "CODE_SIGN_STYLE": .string("Automatic"),
-            "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO"
+            "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
+            // visionOS は volumetric ウィンドウのみのため、既定シーンのロールを
+            // SDK 別に切り替える（Info.plist の $(KOIKOI_DEFAULT_SCENE_ROLE) で参照）
+            "KOIKOI_DEFAULT_SCENE_ROLE": .string("UIWindowSceneSessionRoleApplication"),
+            "KOIKOI_DEFAULT_SCENE_ROLE[sdk=xros*]":
+                .string("UIWindowSceneSessionRoleVolumetricApplication"),
+            "KOIKOI_DEFAULT_SCENE_ROLE[sdk=xrsimulator*]":
+                .string("UIWindowSceneSessionRoleVolumetricApplication")
         ]),
     targets: [
         .target(
@@ -42,7 +49,9 @@ let project = Project(
                 // visionOS の volumetric ウィンドウ等、複数シーンを開けるようにする
                 // （false だと openWindow が黙って失敗する）
                 "UIApplicationSceneManifest": [
-                    "UIApplicationSupportsMultipleScenes": true
+                    "UIApplicationSupportsMultipleScenes": true,
+                    "UIApplicationPreferredDefaultSceneSessionRole":
+                        .string("$(KOIKOI_DEFAULT_SCENE_ROLE)")
                 ],
                 "CFBundleDisplayName": .string("Koikoi"),
                 "CFBundleVersion": .string("$(CURRENT_PROJECT_VERSION)"),

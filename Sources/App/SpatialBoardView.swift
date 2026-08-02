@@ -18,27 +18,13 @@ struct SpatialBoardView: View {
 
     var body: some View {
         GeometryReader3D { proxy in
-            RealityView { content, attachments in
+            RealityView { content in
                 content.add(board.root)
                 ground(content, proxy: proxy)
                 board.sync(model: model, animated: false)
-                place(attachments)
-            } update: { content, attachments in
+            } update: { content in
                 ground(content, proxy: proxy)
                 board.sync(model: model, animated: true)
-                place(attachments)
-            } attachments: {
-                Attachment(id: "setup") {
-                    if model == nil { setupPanel }
-                }
-                Attachment(id: "panel") {
-                    if let model {
-                        SpatialControlPanel(
-                            model: model,
-                            onSave: { exporting = true },
-                            onQuit: quitToTitle)
-                    }
-                }
             }
             .gesture(
                 TapGesture()
@@ -46,6 +32,18 @@ struct SpatialBoardView: View {
                     .onEnded { value in
                         handleTap(entityName: value.entity.name)
                     })
+        }
+        // 操作 UI は attachment ではなく ornament で出す
+        // （動的 attachment は表示が不安定になったため。ornament は SwiftUI 管理で確実）
+        .ornament(attachmentAnchor: .scene(.back)) {
+            if let model {
+                SpatialControlPanel(
+                    model: model,
+                    onSave: { exporting = true },
+                    onQuit: quitToTitle)
+            } else {
+                setupPanel
+            }
         }
         .onAppear { GameCenterService.shared.authenticate() }
         .fileExporter(
@@ -86,7 +84,8 @@ struct SpatialBoardView: View {
 
     private func start(record: GameRecord) {
         moves = record.moves
-        let model = GameViewModel(record: record)
+        // 2D 用の獲得アニメ演出（適用前ディレイ）は使わず、3D 側のタイムラインで表現する
+        let model = GameViewModel(record: record, captureAnimationsEnabled: false)
         model.onMoveApplied = { moves.append($0) }
         self.model = model
     }
@@ -104,17 +103,6 @@ struct SpatialBoardView: View {
         board.root.position.y = bounds.min.y
     }
 
-    private func place(_ attachments: RealityViewAttachments) {
-        if let setup = attachments.entity(for: "setup") {
-            setup.position = [0, 0.30, 0.05]
-            if setup.parent == nil { board.root.addChild(setup) }
-        }
-        if let panel = attachments.entity(for: "panel") {
-            panel.position = [0, 0.26, -0.34]
-            if panel.parent == nil { board.root.addChild(panel) }
-        }
-    }
-
     private func handleTap(entityName: String) {
         guard let model, entityName.hasPrefix("card:"),
             let id = Int(entityName.dropFirst(5)),
@@ -130,7 +118,8 @@ struct SpatialBoardView: View {
 // MARK: - 盤面シーン
 
 /// 盤面のエンティティを札 ID ごとに保持し、ビューモデルの状態へ差分同期するストア。
-/// 位置が変わった札は move(to:) でアニメーションしながらゾーン間を移動する。
+/// ゾーン遷移（手札→場→獲得、山札からの出現）を分類し、1 手ずつ時間差の
+/// タイムラインに載せて move(to:) でアニメーションする。
 @MainActor
 private final class BoardScene {
     let root = Entity()
@@ -140,6 +129,14 @@ private final class BoardScene {
     private var felt: ModelEntity?
     private var deck: ModelEntity?
     private var deckRemaining = -1
+    /// 前回同期時の各札の所在（手番シーケンスの再構成に使う）。
+    private var zones: [Int: Zone] = [:]
+    /// 前回適用した最終トランスフォーム（変化のない札の進行中アニメを守る）。
+    private var targets: [Int: Transform] = [:]
+    /// 札ごとの予約世代。新しい予約が入ったら古い遅延実行を無効化する。
+    private var generations: [Int: Int] = [:]
+
+    private enum Zone { case hand, field, captured, drawn }
 
     // 実寸（メートル）。札は実物の花札とほぼ同じ大きさ。
     private static let cardWidth: Float = 0.057
@@ -149,8 +146,11 @@ private final class BoardScene {
     private static let feltDepth: Float = 0.60
     private static let deckX: Float = -0.30
     private static let deckZ: Float = 0.01
+    private static let deckTop: SIMD3<Float> = [deckX, 0.06, deckZ]
+    private static let opponentHandSpot: SIMD3<Float> = [0, 0.02, -0.17]
     private static let feltColor = UIColor(Color(red: 0.10, green: 0.28, blue: 0.20))
     private static let cardBackColor = UIColor(Color(red: 0.72, green: 0.18, blue: 0.15))
+    private static let glowColor = UIColor(Color(red: 1.00, green: 0.82, blue: 0.25))
 
     /// 札 1 枚の目標配置。
     private struct Pose {
@@ -158,65 +158,201 @@ private final class BoardScene {
         var tilt: Float = 0
         var scale: Float = 1
         var raised = false
+        var glowing = false
         var hoverable = false
+        /// 手札に出すマッチ枚数バッジ（0 なら非表示）。
+        var badgeCount = 0
+    }
+
+    /// 1 手ずつ札の移動を時間差で予約するタイムライン。
+    private struct Timeline {
+        var legs: [Int: [(Double, Transform)]] = [:]
+        var spawns: [Int: SIMD3<Float>] = [:]
+        var consumed: Set<Int> = []
+        var clock = 0.0
     }
 
     func sync(model: GameViewModel?, animated: Bool) {
         makeFeltIfNeeded()
-
         guard let model else {
-            syncDeck(remaining: 0)
-            syncBacks(total: 0, animated: false)
-            cards.values.forEach { $0.removeFromParent() }
-            cards.removeAll()
+            resetBoard()
             return
         }
 
         let game = model.game
         var poses: [Int: Pose] = [:]
+        var newZones: [Int: Zone] = [:]
+        collectPoses(model: model, into: &poses, zones: &newZones)
 
-        // 場札（8 枚で折り返して 2 列）
+        let opponentTotal = game.hand(for: .opponent).count
+        let opponentPlayed = opponentTotal < backs.count
+        syncBacks(total: opponentTotal, animated: animated)
+        syncDeck(remaining: game.deck.count)
+
+        let oldZones = zones
+        zones = newZones
+
+        // 新規登場した札（山札から引かれた・相手の手元から出た・配り直し）
+        let appears = poses.keys.filter { oldZones[$0] == nil && cards[$0] == nil }
+        var timeline = Timeline()
+        if animated && appears.count <= 4 {
+            timeline = buildTimeline(
+                poses: poses, oldZones: oldZones,
+                appears: appears.sorted(), opponentPlayed: opponentPlayed)
+        }
+        applyPoses(poses, timeline: timeline, animated: animated)
+    }
+
+    // MARK: 配置計算
+
+    private func collectPoses(
+        model: GameViewModel, into poses: inout [Int: Pose], zones newZones: inout [Int: Zone]
+    ) {
+        let game = model.game
+        // 手札選択中は「いずれかの手札で獲得できる場札」を光らせる
+        // （2D 版のホバー起点ハイライトは視線情報が取れない visionOS では使えない）
+        let capturable: Set<Int> = model.prompt == .selectHand
+            ? Set(game.hand(for: .player)
+                .flatMap { game.matchingFieldCards(for: $0) }.map(\.id))
+            : []
+        let candidates = Set(model.highlightedFieldCards.map(\.id))
+
         let field = game.field
         for (index, card) in field.enumerated() {
             let row = index / 8
             let rowTotal = row == 0 ? min(field.count, 8) : field.count - 8
-            let highlighted = model.highlightedFieldCards.contains(card)
+            let isCandidate = candidates.contains(card.id)
             poses[card.id] = Pose(
-                position: [
-                    rowX(index % 8, of: rowTotal),
-                    0.003,
-                    -0.04 + Float(row) * 0.10
-                ],
-                raised: highlighted,
-                hoverable: highlighted)
+                position: [rowX(index % 8, of: rowTotal), 0.003, -0.04 + Float(row) * 0.10],
+                raised: isCandidate,
+                glowing: isCandidate || capturable.contains(card.id),
+                hoverable: isCandidate)
+            newZones[card.id] = .field
         }
 
-        // 自分の手札（手前・少し起こして持ち札らしく）
+        // 自分の手札（手前・プレイヤー側へ面を起こして持ち札らしく）
         let hand = game.hand(for: .player)
         let selecting = model.prompt == .selectHand
         for (index, card) in hand.enumerated() {
             poses[card.id] = Pose(
-                position: [rowX(index, of: hand.count), 0.003, 0.17],
-                tilt: -0.35,
+                position: [rowX(index, of: hand.count), 0.018, 0.17],
+                tilt: 0.35,
                 raised: model.pendingHandCard == card,
-                hoverable: selecting)
+                hoverable: selecting,
+                badgeCount: selecting ? game.matchingFieldCards(for: card).count : 0)
+            newZones[card.id] = .hand
         }
 
         // 山札から引いた札は山札の上に浮かべて提示
         if let drawn = model.drawnCard {
-            poses[drawn.id] = Pose(
-                position: [Self.deckX, 0.07, Self.deckZ],
-                tilt: -0.55)
+            poses[drawn.id] = Pose(position: [Self.deckX, 0.07, Self.deckZ], tilt: 0.55)
+            newZones[drawn.id] = .drawn
         }
 
         // 獲得札は盤の手前/奥の縁に小さく並べる
-        layoutCaptured(game.captured(for: .player), z: 0.27, into: &poses)
-        layoutCaptured(game.captured(for: .opponent), z: -0.27, into: &poses)
+        layoutCaptured(game.captured(for: .player), z: 0.27, into: &poses, zones: &newZones)
+        layoutCaptured(game.captured(for: .opponent), z: -0.27, into: &poses, zones: &newZones)
+    }
 
-        syncBacks(total: game.hand(for: .opponent).count, animated: animated)
-        syncDeck(remaining: game.deck.count)
+    private func rowX(_ index: Int, of total: Int) -> Float {
+        (Float(index) - Float(total - 1) / 2) * Self.handPitch
+    }
 
-        // 差分適用: 新しい札は山札の上から出現し、既存の札は目標へ飛ぶ
+    private func layoutCaptured(
+        _ captured: [Card], z: Float,
+        into poses: inout [Int: Pose], zones newZones: inout [Int: Zone]
+    ) {
+        let pitch: Float = min(0.024, 0.6 / Float(max(captured.count, 1)))
+        for (index, card) in captured.enumerated() {
+            poses[card.id] = Pose(
+                position: [-0.30 + Float(index) * pitch, 0.003, z],
+                scale: 0.6)
+            newZones[card.id] = .captured
+        }
+    }
+
+    private func transform(for pose: Pose) -> Transform {
+        Transform(
+            scale: .init(repeating: pose.scale),
+            rotation: simd_quatf(angle: pose.tilt, axis: [1, 0, 0]),
+            translation: pose.position + [0, pose.raised ? 0.016 : 0, 0])
+    }
+
+    // MARK: 手番シーケンスの組み立て
+
+    private func buildTimeline(
+        poses: [Int: Pose], oldZones: [Int: Zone], appears: [Int], opponentPlayed: Bool
+    ) -> Timeline {
+        var timeline = Timeline()
+        let fieldToCaptured = poses.keys.filter {
+            oldZones[$0] == .field && zones[$0] == .captured
+        }
+
+        // 1. 自分の手札から出した札
+        for id in poses.keys.sorted()
+        where oldZones[id] == .hand && zones[id] != .hand {
+            plan(id, into: &timeline, poses: poses, fieldToCaptured: fieldToCaptured)
+        }
+        // 2. 相手の手元から出た札（裏札が減ったときの出現札。獲得ペアのある札を優先）
+        var deckAppears = appears
+        if opponentPlayed,
+            let played = deckAppears.first(where: {
+                capturePartner(of: $0, in: fieldToCaptured, consumed: timeline.consumed) != nil
+            }) ?? deckAppears.first {
+            timeline.spawns[played] = Self.opponentHandSpot
+            plan(played, into: &timeline, poses: poses, fieldToCaptured: fieldToCaptured)
+            deckAppears.removeAll { $0 == played }
+        }
+        // 3. 山札から現れた札
+        for id in deckAppears {
+            timeline.spawns[id] = Self.deckTop
+            plan(id, into: &timeline, poses: poses, fieldToCaptured: fieldToCaptured)
+        }
+        // 4. 山札の上に提示されていた引き札の解決（場へ置く/獲得）
+        for id in poses.keys.sorted()
+        where oldZones[id] == .drawn && zones[id] != .drawn {
+            plan(id, into: &timeline, poses: poses, fieldToCaptured: fieldToCaptured)
+        }
+        return timeline
+    }
+
+    /// 1 手分の移動を予約する。獲得ペアがあれば相手の場札まで飛んで
+    /// がっちゃんこし、2 枚同時に獲得置き場へ移動する。
+    private func plan(
+        _ mover: Int, into timeline: inout Timeline,
+        poses: [Int: Pose], fieldToCaptured: [Int]
+    ) {
+        guard let pose = poses[mover] else { return }
+        if let mate = capturePartner(of: mover, in: fieldToCaptured, consumed: timeline.consumed),
+            let mateEntity = cards[mate], let matePose = poses[mate] {
+            timeline.consumed.insert(mate)
+            let meet = Transform(translation: mateEntity.position + [0, 0.008, 0])
+            timeline.legs[mover] = [
+                (timeline.clock, meet),
+                (timeline.clock + 0.55, transform(for: pose))
+            ]
+            timeline.legs[mate] = [(timeline.clock + 0.55, transform(for: matePose))]
+            timeline.clock += 1.0
+        } else {
+            timeline.legs[mover] = [(timeline.clock, transform(for: pose))]
+            timeline.clock += 0.5
+        }
+    }
+
+    private func capturePartner(
+        of id: Int, in fieldToCaptured: [Int], consumed: Set<Int>
+    ) -> Int? {
+        guard zones[id] == .captured, let month = Card.card(id: id)?.month else { return nil }
+        return fieldToCaptured.first {
+            !consumed.contains($0) && Card.card(id: $0)?.month == month
+        }
+    }
+
+    // MARK: 適用
+
+    private func applyPoses(
+        _ poses: [Int: Pose], timeline: Timeline, animated: Bool
+    ) {
         for (id, pose) in poses {
             guard let card = Card.card(id: id) else { continue }
             let entity: ModelEntity
@@ -225,57 +361,81 @@ private final class BoardScene {
             } else {
                 entity = makeCardEntity(card)
                 if animated {
-                    entity.position = [Self.deckX, 0.07, Self.deckZ]
+                    entity.position = timeline.spawns[id] ?? Self.deckTop
                 }
             }
-            apply(pose, to: entity, animated: animated)
+            setGlow(pose.glowing, on: entity)
+            setBadge(pose.badgeCount, on: entity)
+            if pose.hoverable {
+                entity.components.set(HoverEffectComponent())
+            } else {
+                entity.components.remove(HoverEffectComponent.self)
+            }
+            let final = transform(for: pose)
+            if let legs = timeline.legs[id] {
+                run(legs, on: entity, id: id, animated: true)
+                targets[id] = final
+            } else if !(targets[id].map { isClose($0, to: final) } ?? false) {
+                run([(0, final)], on: entity, id: id, animated: animated)
+                targets[id] = final
+            }
         }
         for (id, entity) in cards where poses[id] == nil {
             entity.removeFromParent()
             cards.removeValue(forKey: id)
+            targets.removeValue(forKey: id)
+            generations.removeValue(forKey: id)
         }
     }
 
-    // MARK: 配置計算
-
-    private func rowX(_ index: Int, of total: Int) -> Float {
-        (Float(index) - Float(total - 1) / 2) * Self.handPitch
-    }
-
-    private func layoutCaptured(_ captured: [Card], z: Float, into poses: inout [Int: Pose]) {
-        let pitch: Float = min(0.024, 0.6 / Float(max(captured.count, 1)))
-        for (index, card) in captured.enumerated() {
-            poses[card.id] = Pose(
-                position: [-0.30 + Float(index) * pitch, 0.003, z],
-                scale: 0.6)
+    /// 予約された脚を順に実行する。新しい予約が入ったら古い遅延分は破棄される。
+    private func run(
+        _ legs: [(Double, Transform)], on entity: ModelEntity, id: Int, animated: Bool
+    ) {
+        let gen = (generations[id] ?? 0) + 1
+        generations[id] = gen
+        for (delay, transform) in legs {
+            if !animated {
+                entity.transform = transform
+            } else if delay <= 0.01 {
+                entity.move(to: transform, relativeTo: root, duration: 0.32, timingFunction: .easeInOut)
+            } else {
+                Task { @MainActor [weak self, weak entity] in
+                    try? await Task.sleep(for: .seconds(delay))
+                    guard let self, self.generations[id] == gen, let entity else { return }
+                    entity.move(
+                        to: transform, relativeTo: self.root,
+                        duration: 0.32, timingFunction: .easeInOut)
+                }
+            }
         }
     }
 
-    private func apply(_ pose: Pose, to entity: ModelEntity, animated: Bool) {
-        let transform = Transform(
-            scale: .init(repeating: pose.scale),
-            rotation: simd_quatf(angle: pose.tilt, axis: [1, 0, 0]),
-            translation: pose.position + [0, pose.raised ? 0.016 : 0, 0])
-        if pose.hoverable {
-            entity.components.set(HoverEffectComponent())
-        } else {
-            entity.components.remove(HoverEffectComponent.self)
-        }
-        if animated {
-            entity.move(to: transform, relativeTo: root, duration: 0.35, timingFunction: .easeInOut)
-        } else {
-            entity.transform = transform
-        }
+    private func isClose(_ lhs: Transform, to rhs: Transform) -> Bool {
+        simd_distance(lhs.translation, rhs.translation) < 0.0005
+            && simd_distance(lhs.rotation.vector, rhs.rotation.vector) < 0.001
+            && abs(lhs.scale.x - rhs.scale.x) < 0.001
     }
 
-    // MARK: エンティティ生成
+    private func resetBoard() {
+        syncDeck(remaining: 0)
+        syncBacks(total: 0, animated: false)
+        cards.values.forEach { $0.removeFromParent() }
+        cards.removeAll()
+        zones.removeAll()
+        targets.removeAll()
+        generations.removeAll()
+    }
+}
 
+// MARK: - エンティティ生成
+
+extension BoardScene {
     private func makeFeltIfNeeded() {
         guard felt == nil else { return }
         let entity = ModelEntity(
-            mesh: .generateBox(
-                width: Self.feltWidth, height: 0.006, depth: Self.feltDepth, cornerRadius: 0.012),
-            materials: [SimpleMaterial(color: Self.feltColor, isMetallic: false)])
+            mesh: .generateBox(width: Self.feltWidth, height: 0.006, depth: Self.feltDepth),
+            materials: [SimpleMaterial(color: Self.feltColor, roughness: 1.0, isMetallic: false)])
         entity.name = "felt"
         entity.position = [0, -0.003, 0]
         root.addChild(entity)
@@ -296,9 +456,56 @@ private final class BoardScene {
         entity.name = "card:\(card.id)"
         entity.generateCollisionShapes(recursive: false)
         entity.components.set(InputTargetComponent())
+        entity.components.set(GroundingShadowComponent(castsShadow: true))
         cards[card.id] = entity
         root.addChild(entity)
         return entity
+    }
+
+    /// 獲得可能な場札に敷く黄色いハイライトの下敷き。
+    private func setGlow(_ on: Bool, on entity: ModelEntity) {
+        let existing = entity.children.first { $0.name == "glow" }
+        if on, existing == nil {
+            let glow = ModelEntity(
+                mesh: .generatePlane(
+                    width: Self.cardWidth * 1.18, depth: Self.cardHeight * 1.12,
+                    cornerRadius: 0.004),
+                materials: [UnlitMaterial(color: Self.glowColor)])
+            glow.name = "glow"
+            glow.position = [0, -0.001, 0]
+            entity.addChild(glow)
+        } else if !on {
+            existing?.removeFromParent()
+        }
+    }
+
+    /// 手札の右上に出すマッチ枚数バッジ（黄色い円盤 + 数字）。
+    private func setBadge(_ matches: Int, on entity: ModelEntity) {
+        let existing = entity.children.first { $0.name.hasPrefix("badge") }
+        let name = "badge:\(matches)"
+        if existing?.name == name { return }
+        existing?.removeFromParent()
+        guard matches > 0 else { return }
+
+        let badge = Entity()
+        badge.name = name
+        let disc = ModelEntity(
+            mesh: .generateCylinder(height: 0.001, radius: 0.0085),
+            materials: [UnlitMaterial(color: Self.glowColor)])
+        badge.addChild(disc)
+
+        let mesh = MeshResource.generateText(
+            "\(matches)", extrusionDepth: 0.0004,
+            font: .systemFont(ofSize: 0.011, weight: .bold))
+        let text = ModelEntity(mesh: mesh, materials: [UnlitMaterial(color: .black)])
+        let bounds = text.visualBounds(relativeTo: nil)
+        // XY 平面のテキストを札面（XZ）に倒し、円盤の中心に合わせる
+        text.orientation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
+        text.position = [-bounds.center.x, 0.0012, bounds.center.y]
+        badge.addChild(text)
+
+        badge.position = [Self.cardWidth / 2 - 0.010, 0.002, -(Self.cardHeight / 2) + 0.010]
+        entity.addChild(badge)
     }
 
     /// 相手の手札（裏向きの薄い赤札）を枚数だけ並べる。
@@ -309,17 +516,17 @@ private final class BoardScene {
         while backs.count < total {
             let back = ModelEntity(
                 mesh: .generateBox(
-                    width: Self.cardWidth, height: 0.0016, depth: Self.cardHeight,
-                    cornerRadius: 0.002),
-                materials: [SimpleMaterial(color: Self.cardBackColor, isMetallic: false)])
+                    width: Self.cardWidth, height: 0.0016, depth: Self.cardHeight),
+                materials: [SimpleMaterial(color: Self.cardBackColor, roughness: 1.0, isMetallic: false)])
             back.name = "back:\(backs.count)"
+            back.components.set(GroundingShadowComponent(castsShadow: true))
             root.addChild(back)
             backs.append(back)
         }
         for (index, back) in backs.enumerated() {
             let transform = Transform(translation: [rowX(index, of: total), 0.003, -0.17])
             if animated {
-                back.move(to: transform, relativeTo: root, duration: 0.35, timingFunction: .easeInOut)
+                back.move(to: transform, relativeTo: root, duration: 0.32, timingFunction: .easeInOut)
             } else {
                 back.transform = transform
             }
@@ -336,11 +543,11 @@ private final class BoardScene {
         let height = 0.0022 * Float(remaining)
         let entity = ModelEntity(
             mesh: .generateBox(
-                width: Self.cardWidth + 0.002, height: height, depth: Self.cardHeight + 0.002,
-                cornerRadius: 0.002),
-            materials: [SimpleMaterial(color: Self.cardBackColor, isMetallic: false)])
+                width: Self.cardWidth + 0.002, height: height, depth: Self.cardHeight + 0.002),
+            materials: [SimpleMaterial(color: Self.cardBackColor, roughness: 1.0, isMetallic: false)])
         entity.name = "deck"
         entity.position = [Self.deckX, height / 2, Self.deckZ]
+        entity.components.set(GroundingShadowComponent(castsShadow: true))
         root.addChild(entity)
         deck = entity
     }
