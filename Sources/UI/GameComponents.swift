@@ -49,8 +49,15 @@ struct CapturedDetail: View {
         self.cardWidth = cardWidth
     }
 
-    private static let groups: [(label: String, type: CardType)] = [
-        ("光", .hikari), ("タネ", .tane), ("短冊", .tanzaku), ("カス", .kasu)
+    private struct Group: Identifiable {
+        let label: String
+        let type: CardType
+        var id: String { label }
+    }
+
+    private static let groups: [Group] = [
+        Group(label: "光", type: .hikari), Group(label: "タネ", type: .tane),
+        Group(label: "短冊", type: .tanzaku), Group(label: "カス", type: .kasu)
     ]
 
     var body: some View {
@@ -58,7 +65,7 @@ struct CapturedDetail: View {
             if !cards.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 8) {
-                        ForEach(Self.groups, id: \.label) { group in
+                        ForEach(Self.groups) { group in
                             let members = cards
                                 .filter { $0.type == group.type }
                                 .sorted { $0.id < $1.id }
