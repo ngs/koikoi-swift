@@ -29,19 +29,21 @@ public struct GameView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 8) {
-            header
-            opponentArea
-            Spacer(minLength: 4)
-            fieldArea
-            Spacer(minLength: 4)
-            playerArea
+        ZStack {
+            Color(red: 0.10, green: 0.28, blue: 0.20)
+                .ignoresSafeArea()
+            // 盤面は余白を挟まない密なブロックとして中央に置く
+            // （ウィンドウを広げた分は外周マージンになる）
+            VStack(alignment: .leading, spacing: 12) {
+                header
+                opponentArea
+                fieldArea
+                playerArea
+            }
+            .padding(12)
+            // 場札・手札 8 枚が 1 行に収まる最小幅
+            .frame(minWidth: Self.minBoardWidth)
         }
-        .padding(12)
-        // 場札・手札 8 枚が 1 行に収まる最小幅のみ指定
-        // （高さは各区画の自然な最小サイズに任せる）
-        .frame(minWidth: Self.minBoardWidth)
-        .background(Color(red: 0.10, green: 0.28, blue: 0.20))
         .overlay { overlays }
         .animation(.default, value: model.game.field)
         .animation(.default, value: model.game.hands)
