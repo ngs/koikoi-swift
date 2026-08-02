@@ -16,18 +16,16 @@ public struct CardDragPayload: Codable, Transferable, Sendable {
     }
 }
 
-/// 札の裏面（墨地に紅の円）。
+/// 札の裏面（黒枠の赤札。伝統的な花札の裏）。
 public struct CardBack: View {
     public init() {}
 
     public var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(Color(red: 0.15, green: 0.16, blue: 0.18))
+            .fill(Color(red: 0.72, green: 0.18, blue: 0.15))
             .overlay {
-                Circle()
-                    .fill(Color(red: 0.78, green: 0.24, blue: 0.19))
-                    .padding(10)
-                    .opacity(0.9)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(Color(red: 0.10, green: 0.10, blue: 0.12), lineWidth: 3)
             }
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
     }
@@ -143,30 +141,30 @@ struct PulsingRing: View {
 }
 
 /// 裏返しの札を残り枚数分重ねた山札。
+/// 1 枚ごとに縁をずらして重ねるため、残量が高さで視覚的に分かる。
 struct DeckStack: View {
     let remaining: Int
+    private let cardWidth: CGFloat = 40
+    /// 1 枚あたりの積み上がり（縁が見える程度）。
+    private let step: CGFloat = 1.1
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            if remaining > 0 {
-                ZStack {
-                    ForEach(0..<remaining, id: \.self) { index in
-                        CardBack()
-                            .frame(width: 40)
-                            .offset(x: CGFloat(index) * -0.35, y: CGFloat(index) * -0.5)
-                    }
+        if remaining > 0 {
+            ZStack(alignment: .bottomLeading) {
+                ForEach(0..<remaining, id: \.self) { index in
+                    CardBack()
+                        .frame(width: cardWidth)
+                        .offset(x: CGFloat(index) * 0.3, y: -CGFloat(index) * step)
                 }
-                .padding(.leading, CGFloat(remaining) * 0.35)
-                .padding(.top, CGFloat(remaining) * 0.5)
-            } else {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(.white.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [5]))
-                    .aspectRatio(Card.aspectRatio, contentMode: .fit)
-                    .frame(width: 40)
             }
-            Text("\(remaining)")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.white.opacity(0.8))
+            .padding(.top, CGFloat(remaining) * step)
+            .padding(.trailing, CGFloat(remaining) * 0.3)
+            .animation(.default, value: remaining)
+        } else {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(.white.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [5]))
+                .aspectRatio(Card.aspectRatio, contentMode: .fit)
+                .frame(width: cardWidth)
         }
     }
 }
