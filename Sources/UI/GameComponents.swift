@@ -68,9 +68,17 @@ struct CapturedDetail: View {
                                 .sorted { $0.id < $1.id }
                             if !members.isEmpty {
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text("\(group.label)(\(members.count))")
-                                        .font(.caption2)
-                                        .foregroundStyle(.white.opacity(0.7))
+                                    HStack(spacing: 4) {
+                                        Text(group.label)
+                                            .foregroundStyle(.white.opacity(0.85))
+                                        Text("\(members.count)")
+                                            .font(.caption2.bold().monospacedDigit())
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 1)
+                                            .background(.white.opacity(0.18), in: Capsule())
+                                            .foregroundStyle(.white)
+                                    }
+                                    .font(.caption2)
                                     HStack(spacing: -cardWidth * 0.35) {
                                         ForEach(members) { card in
                                             CardImage(card)
@@ -113,7 +121,7 @@ struct ReachList: View {
     }
 }
 
-/// 成立中の役のバッジ列。
+/// 成立中の役のバッジ列（役名 + 文数チップ。文字での説明は最小限に）。
 struct YakuBadges: View {
     let yakus: [Yaku]
 
@@ -121,12 +129,20 @@ struct YakuBadges: View {
         if !yakus.isEmpty {
             HStack(spacing: 6) {
                 ForEach(yakus, id: \.self) { yaku in
-                    Text("\(yaku.kind.rawValue) \(yaku.points)文")
-                        .font(.caption2.bold())
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(.red.opacity(0.85), in: Capsule())
-                        .foregroundStyle(.white)
+                    HStack(spacing: 5) {
+                        Text(yaku.kind.rawValue)
+                        Text("\(yaku.points)")
+                            .font(.caption2.bold().monospacedDigit())
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.white.opacity(0.25), in: Capsule())
+                    }
+                    .font(.caption2.bold())
+                    .padding(.leading, 7)
+                    .padding(.trailing, 4)
+                    .padding(.vertical, 2)
+                    .background(.red.opacity(0.85), in: Capsule())
+                    .foregroundStyle(.white)
                 }
             }
         }
@@ -138,7 +154,7 @@ struct PulsingRing: View {
     @State private var pulsing = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
+        RoundedRectangle(cornerRadius: 3, style: .continuous)
             .stroke(.yellow, lineWidth: 3)
             .opacity(pulsing ? 1.0 : 0.35)
             .onAppear {
@@ -199,7 +215,7 @@ struct FieldCardView: View {
                         PulsingRing()
                     }
                     if focused {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
                             .stroke(.white, lineWidth: 3)
                             .padding(-3)
                     }
@@ -228,7 +244,7 @@ struct HandCardView: View {
                         PulsingRing()
                     }
                     if focused {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
                             .stroke(.white, lineWidth: 3)
                             .padding(-3)
                     }
