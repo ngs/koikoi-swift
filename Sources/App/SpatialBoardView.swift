@@ -380,8 +380,9 @@ private final class BoardScene {
                 targets[id] = final
             }
         }
-        for (id, entity) in cards where poses[id] == nil {
-            entity.removeFromParent()
+        let stale = cards.keys.filter { poses[$0] == nil }
+        for id in stale {
+            cards[id]?.removeFromParent()
             cards.removeValue(forKey: id)
             targets.removeValue(forKey: id)
             generations.removeValue(forKey: id)
