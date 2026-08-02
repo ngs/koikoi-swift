@@ -46,7 +46,8 @@ public final class KoikoiGameDocument: ReferenceFileDocument {
 /// 文書 1 つ分の画面。未設定なら対局設定、設定済みならリプレイして対局へ。
 public struct GameDocumentView: View {
     @ObservedObject private var document: KoikoiGameDocument
-    @Environment(\.undoManager) private var undoManager
+    @Environment(\.undoManager)
+    private var undoManager
     @State private var model: GameViewModel?
 
     public init(document: KoikoiGameDocument) {
@@ -75,6 +76,7 @@ public struct GameDocumentView: View {
     }
 
     private func startGame(record: GameRecord) {
+        GameCenterService.shared.authenticate()
         let model = GameViewModel(record: record)
         let undoManager = self.undoManager
         model.onMoveApplied = { [weak document] move in

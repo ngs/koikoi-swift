@@ -76,6 +76,7 @@ let project = Project(
             ]),
             sources: ["Sources/App/**"],
             resources: ["Resources/**"],
+            entitlements: "Resources/Koikoi.entitlements",
             scripts: [
                 .pre(
                     script: "${SRCROOT}/Scripts/swiftlint-fix-build-phase.sh",

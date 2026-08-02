@@ -388,7 +388,11 @@ public final class GameViewModel {
         guard case .roundEnd = prompt else { return }
         let game = simulator.game
         if game.round >= game.maxRounds {
-            prompt = .matchEnd(winner: matchWinner(of: game))
+            let winner = matchWinner(of: game)
+            prompt = .matchEnd(winner: winner)
+            GameCenterService.shared.reportMatchEnd(
+                playerWon: winner == .player,
+                playerScore: game.score(for: .player))
             return
         }
         advanceRound()
