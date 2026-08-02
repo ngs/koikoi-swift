@@ -95,16 +95,6 @@ public struct GameView: View {
                     CardBack().frame(width: 34)
                 }
                 Spacer()
-                if let line = model.opponentLine {
-                    Text(line)
-                        .font(.caption)
-                        .foregroundStyle(.black)
-                        .multilineTextAlignment(.leading)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 10))
-                        .frame(maxWidth: 380, alignment: .trailing)
-                }
             }
             YakuBadges(yakus: model.opponentYaku)
             CapturedDetail(cards: model.game.captured(for: .opponent), cardWidth: 30)

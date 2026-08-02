@@ -40,8 +40,6 @@ public final class GameViewModel {
     public private(set) var prompt: Prompt = .selectHand
     /// 手札 2 枚マッチの場札選択中に保持する手札。
     public private(set) var pendingHandCard: Card?
-    /// 相手 AI のひとこと（FoundationModels・不可用時は常に nil）。
-    public private(set) var opponentLine: String?
     /// 十字キー操作のカーソル（キー入力があるまで nil）。
     public private(set) var cursor: Cursor?
     /// こいこいダイアログでキー選択中の側（true = こいこい）。
@@ -56,7 +54,6 @@ public final class GameViewModel {
     private var rng: GameRandom
     private let engine = ISMCTSEngine(
         configuration: ISMCTSConfiguration(iterations: 400))
-    private let persona = OpponentPersona()
     private var aiTask: Task<Void, Never>?
 
     public init(
@@ -290,9 +287,6 @@ public final class GameViewModel {
     public func decide(koikoi: Bool) {
         guard case .decideKoikoi = prompt else { return }
         apply(koikoi ? .koikoi : .shobu)
-        if koikoi {
-            requestPersonaLine(.playerKoikoi)
-        }
     }
 
     /// ラウンド終了画面から次へ進む。
@@ -301,7 +295,6 @@ public final class GameViewModel {
         var game = simulator.game
         if game.round >= game.maxRounds {
             prompt = .matchEnd(winner: matchWinner(of: game))
-            requestPersonaLine(.gameEnd(selfWon: matchWinner(of: game).map { $0 == .opponent }))
             return
         }
         game.round += 1
@@ -341,7 +334,6 @@ public final class GameViewModel {
             prompt = .roundEnd(outcome)
             aiTask?.cancel()
             aiTask = nil
-            announceRoundEnd(outcome)
         }
         syncCursor()
     }
@@ -364,9 +356,6 @@ public final class GameViewModel {
             let move = await computeOpponentMove()
             // 探索の await 中にキャンセル・置き換えされた可能性があるため再確認する
             guard !Task.isCancelled, let move, simulator.seatToMove == .opponent else { return }
-            if case .koikoi = move {
-                requestPersonaLine(personaKoikoiEvent())
-            }
             simulator.apply(move)
 
             if case .finished = simulator.phase {
@@ -400,35 +389,6 @@ public final class GameViewModel {
             return simulator.heuristicMove(difficulty: difficulty, rng: &rng)
         }.value
         return move
-    }
-
-    // MARK: - 人格（台詞）
-
-    private func personaKoikoiEvent() -> PersonaEvent {
-        if case .decideKoikoi(_, let newYaku) = simulator.phase {
-            return .selfKoikoi(newYaku: newYaku, handCount: game.hand(for: .opponent).count)
-        }
-        return .selfKoikoi(newYaku: [], handCount: game.hand(for: .opponent).count)
-    }
-
-    private func announceRoundEnd(_ outcome: RoundOutcome) {
-        switch outcome.winner {
-        case .opponent:
-            requestPersonaLine(.selfShobu(points: outcome.points))
-        case .player:
-            requestPersonaLine(.playerShobu(points: outcome.points))
-        case nil:
-            requestPersonaLine(.roundDrawn)
-        }
-    }
-
-    private func requestPersonaLine(_ event: PersonaEvent) {
-        guard OpponentPersona.isAvailable else { return }
-        let persona = self.persona
-        Task { [weak self] in
-            let line = await persona.comment(on: event)
-            self?.opponentLine = line
-        }
     }
 
     // MARK: - テスト用フック
