@@ -211,7 +211,12 @@ end
 
 desc 'Setup AppStore Connect API Key'
 lane :setup_app_store_connect_api_key do
-  return unless ENV['APP_STORE_CONNECT_API_KEY_KEY_ID'] && ENV['APP_STORE_CONNECT_API_KEY_ISSUER_ID'] && ENV['APP_STORE_CONNECT_API_KEY_KEY']
+  # CI では未設定のシークレットが空文字で入るため、空文字も未設定として扱う
+  return if %w[
+    APP_STORE_CONNECT_API_KEY_KEY_ID
+    APP_STORE_CONNECT_API_KEY_ISSUER_ID
+    APP_STORE_CONNECT_API_KEY_KEY
+  ].any? { |name| ENV[name].to_s.empty? }
 
   app_store_connect_api_key(
     key_id: ENV['APP_STORE_CONNECT_API_KEY_KEY_ID'],
