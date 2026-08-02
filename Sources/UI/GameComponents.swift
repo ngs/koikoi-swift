@@ -21,18 +21,15 @@ public struct CardDragPayload: Codable, Transferable, Sendable {
     }
 }
 
-/// 札の裏面（黒枠の赤札。伝統的な花札の裏）。
+/// 札の裏面（赤札 + ドロップシャドウ）。
 public struct CardBack: View {
     public init() {}
 
     public var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(Color(red: 0.72, green: 0.18, blue: 0.15))
-            .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color(red: 0.10, green: 0.10, blue: 0.12), lineWidth: 3)
-            }
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
+            .shadow(color: .black.opacity(0.45), radius: 2, x: 0, y: 1)
     }
 }
 
