@@ -8,6 +8,18 @@ extension Color {
     static let koikoiTable = Color(red: 0.10, green: 0.28, blue: 0.20)
 }
 
+extension View {
+    /// visionOS では z 方向に浮かせる（他プラットフォームでは何もしない）。
+    @ViewBuilder
+    func lifted(_ zOffset: CGFloat) -> some View {
+        #if os(visionOS)
+        offset(z: zOffset)
+        #else
+        self
+        #endif
+    }
+}
+
 public extension UTType {
     /// アプリ内 D&D 専用の札ペイロード型（外部の一般 JSON を受けないため）。
     static let koikoiCard = UTType(exportedAs: "io.ngs.Koikoi.card")
@@ -266,6 +278,7 @@ struct DeckStack: View {
                     CardBack()
                         .frame(width: cardWidth)
                         .offset(x: CGFloat(index) * 0.3, y: -CGFloat(index) * step)
+                        .lifted(CGFloat(index) * 1.2)  // visionOS: 実際に厚みが出る
                 }
             }
             .padding(.top, CGFloat(remaining) * step)
@@ -296,6 +309,7 @@ struct FieldCardView: View {
         Button(action: action) {
             CardImage(card)
                 .opacity(dimmed && !highlighted ? 0.4 : 1)
+                .lifted(highlighted || focused ? 14 : 2)
                 .overlay {
                     if highlighted {
                         PulsingRing()
@@ -325,6 +339,7 @@ struct HandCardView: View {
     var body: some View {
         Button(action: action) {
             CardImage(card)
+                .lifted(selected || focused ? 14 : 2)
                 .overlay {
                     if selected {
                         PulsingRing()
