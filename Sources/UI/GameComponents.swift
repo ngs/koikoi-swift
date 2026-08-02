@@ -99,25 +99,48 @@ struct CapturedDetail: View {
     }
 }
 
-/// リーチ一覧（go-koikoi の「── リーチ ──」相当）。
+/// リーチ一覧のパネル（タイトル + 役名バッジ + 不足札名）。
 struct ReachList: View {
     let reaches: [YakuReach]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            ForEach(reaches, id: \.self) { reach in
-                Text(line(for: reach))
-                    .font(.caption2)
-                    .foregroundStyle(.yellow.opacity(0.85))
+        VStack(alignment: .leading, spacing: 6) {
+            Text("リーチ")
+                .font(.caption.bold())
+            Rectangle()
+                .fill(.white.opacity(0.35))
+                .frame(height: 1)
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 5) {
+                ForEach(reaches, id: \.self) { reach in
+                    GridRow {
+                        Text(reach.kind.rawValue)
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                .red.opacity(0.85),
+                                in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                            .gridColumnAlignment(.trailing)
+                        Text(missingText(for: reach))
+                            .font(.caption)
+                    }
+                }
             }
         }
+        .foregroundStyle(.white)
+        .padding(10)
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(.white.opacity(0.45), lineWidth: 1.5)
+        }
+        .fixedSize()
     }
 
-    private func line(for reach: YakuReach) -> String {
+    private func missingText(for reach: YakuReach) -> String {
         if let missing = reach.missing, !missing.isEmpty {
-            return "リーチ \(reach.kind.rawValue): \(missing.map(\.name).joined(separator: " / "))"
+            return missing.map(\.name).joined(separator: " / ")
         }
-        return "リーチ \(reach.kind.rawValue): あと1枚"
+        return "あと1枚"
     }
 }
 
