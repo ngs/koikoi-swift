@@ -1,5 +1,20 @@
+import CoreTransferable
 import KoikoiCore
 import SwiftUI
+import UniformTypeIdentifiers
+
+/// 手札ドラッグのペイロード（アプリ内 D&D 用）。
+public struct CardDragPayload: Codable, Transferable, Sendable {
+    public let id: Int
+
+    public init(id: Int) {
+        self.id = id
+    }
+
+    public static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .json)
+    }
+}
 
 /// 札の裏面（墨地に紅の円）。
 public struct CardBack: View {
@@ -18,28 +33,76 @@ public struct CardBack: View {
     }
 }
 
-/// 獲得札の一覧（種類順・小サイズの横スクロール）。
-struct CapturedRow: View {
+/// 獲得札の詳細（go-koikoi の writeCapturedDetail 相当）。
+/// 種類別のグループ（枚数付き）で並べ、必要ならリーチも示す。
+struct CapturedDetail: View {
     let cards: [Card]
+    let reaches: [YakuReach]
     let cardWidth: CGFloat
 
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: -cardWidth * 0.4) {
-                ForEach(sorted) { card in
-                    CardImage(card)
-                        .frame(width: cardWidth)
-                }
-            }
-            .padding(.horizontal, 4)
-        }
-        .frame(height: cardWidth / Card.aspectRatio)
+    init(cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat) {
+        self.cards = cards
+        self.reaches = reaches
+        self.cardWidth = cardWidth
     }
 
-    private var sorted: [Card] {
-        cards.sorted { lhs, rhs in
-            lhs.type == rhs.type ? lhs.id < rhs.id : lhs.type > rhs.type
+    private static let groups: [(label: String, type: CardType)] = [
+        ("光", .hikari), ("タネ", .tane), ("短冊", .tanzaku), ("カス", .kasu)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if !cards.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 8) {
+                        ForEach(Self.groups, id: \.label) { group in
+                            let members = cards
+                                .filter { $0.type == group.type }
+                                .sorted { $0.id < $1.id }
+                            if !members.isEmpty {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("\(group.label)(\(members.count))")
+                                        .font(.caption2)
+                                        .foregroundStyle(.white.opacity(0.7))
+                                    HStack(spacing: -cardWidth * 0.35) {
+                                        ForEach(members) { card in
+                                            CardImage(card)
+                                                .frame(width: cardWidth)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
+            }
+            if !reaches.isEmpty {
+                ReachList(reaches: reaches)
+            }
         }
+    }
+}
+
+/// リーチ一覧（go-koikoi の「── リーチ ──」相当）。
+struct ReachList: View {
+    let reaches: [YakuReach]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(reaches, id: \.self) { reach in
+                Text(line(for: reach))
+                    .font(.caption2)
+                    .foregroundStyle(.yellow.opacity(0.85))
+            }
+        }
+    }
+
+    private func line(for reach: YakuReach) -> String {
+        if let missing = reach.missing, !missing.isEmpty {
+            return "リーチ \(reach.kind.rawValue): \(missing.map(\.name).joined(separator: " / "))"
+        }
+        return "リーチ \(reach.kind.rawValue): あと1枚"
     }
 }
 
@@ -63,23 +126,122 @@ struct YakuBadges: View {
     }
 }
 
-/// 場札 1 枚（選択候補ハイライト付き）。
+/// 明滅する強調枠（選択候補のハイライト用）。
+struct PulsingRing: View {
+    @State private var pulsing = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .stroke(.yellow, lineWidth: 3)
+            .opacity(pulsing ? 1.0 : 0.35)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
+                    pulsing = true
+                }
+            }
+    }
+}
+
+/// 裏返しの札を残り枚数分重ねた山札。
+struct DeckStack: View {
+    let remaining: Int
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if remaining > 0 {
+                ZStack {
+                    ForEach(0..<remaining, id: \.self) { index in
+                        CardBack()
+                            .frame(width: 40)
+                            .offset(x: CGFloat(index) * -0.35, y: CGFloat(index) * -0.5)
+                    }
+                }
+                .padding(.leading, CGFloat(remaining) * 0.35)
+                .padding(.top, CGFloat(remaining) * 0.5)
+            } else {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(.white.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [5]))
+                    .aspectRatio(Card.aspectRatio, contentMode: .fit)
+                    .frame(width: 40)
+            }
+            Text("\(remaining)")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.white.opacity(0.8))
+        }
+    }
+}
+
+/// 場札 1 枚。
+/// - highlighted: 選択候補 / プレビュー手札のマッチ（黄枠・明滅、常に alpha 1）
+/// - focused: キーカーソル位置（白枠・太）
+/// - dimmed: 場札選択中の候補外（減光）
 struct FieldCardView: View {
     let card: Card
     let highlighted: Bool
+    let focused: Bool
+    let dimmed: Bool
+    let tappable: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            CardImage(card)
+                .opacity(dimmed && !highlighted ? 0.4 : 1)
+                .overlay {
+                    if highlighted {
+                        PulsingRing()
+                    }
+                    if focused {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(.white, lineWidth: 3)
+                            .padding(-3)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        // disabled はコンテンツを減光してしまうためヒットテストで制御する
+        .allowsHitTesting(tappable)
+    }
+}
+
+/// 手札 1 枚（マッチ枚数バッジ・カーソル/選択枠・ドラッグ対応）。
+struct HandCardView: View {
+    let card: Card
+    let matchCount: Int
+    let selected: Bool
+    let focused: Bool
+    let tappable: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             CardImage(card)
                 .overlay {
-                    if highlighted {
+                    if selected {
+                        PulsingRing()
+                    }
+                    if focused {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(.yellow, lineWidth: 3)
+                            .stroke(.white, lineWidth: 3)
+                            .padding(-3)
+                    }
+                }
+                .overlay(alignment: .topTrailing) {
+                    if matchCount > 0 {
+                        Text("\(matchCount)")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.black)
+                            .padding(4)
+                            .background(.yellow, in: Circle())
+                            .offset(x: 4, y: -4)
                     }
                 }
         }
         .buttonStyle(.plain)
-        .disabled(!highlighted)
+        // disabled はコンテンツを減光してしまうためヒットテストで制御する
+        .allowsHitTesting(tappable)
+        .draggable(CardDragPayload(id: card.id)) {
+            CardImage(card).frame(width: 56)
+        }
     }
 }

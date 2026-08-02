@@ -3,12 +3,23 @@ import KoikoiCore
 import SwiftUI
 
 /// 対局画面。上から相手陣・場・自陣の三段構成（全プラットフォーム共有）。
+/// 操作系: タップ / ドラッグ&ドロップ（手札→場）/ 十字キー + Enter・Esc。
 public struct GameView: View {
     @State private var model: GameViewModel
+    @FocusState private var boardFocused: Bool
     private let onExit: (() -> Void)?
+    /// D&D の受け皿を張るか。ImageRenderer はドロップ受けのバッキングビューを
+    /// 描画できず禁止マークのプレースホルダになるため、スナップショット描画時のみ
+    /// false にする（実アプリでは常に true）。
+    private let dropTargetsEnabled: Bool
 
-    public init(model: GameViewModel, onExit: (() -> Void)? = nil) {
+    public init(
+        model: GameViewModel,
+        dropTargetsEnabled: Bool = true,
+        onExit: (() -> Void)? = nil
+    ) {
         _model = State(initialValue: model)
+        self.dropTargetsEnabled = dropTargetsEnabled
         self.onExit = onExit
     }
 
@@ -26,6 +37,42 @@ public struct GameView: View {
         .overlay { overlays }
         .animation(.default, value: model.game.field)
         .animation(.default, value: model.game.hands)
+        .focusable()
+        .focusEffectDisabled()
+        .focused($boardFocused)
+        .onAppear { boardFocused = true }
+        .onKeyPress(.leftArrow) { move(.left) }
+        .onKeyPress(.rightArrow) { move(.right) }
+        .onKeyPress(.upArrow) { move(.up) }
+        .onKeyPress(.downArrow) { move(.down) }
+        .onKeyPress(.return) { activate() }
+        .onKeyPress(.space) { activate() }
+        .onKeyPress(.escape) {
+            model.cancelFieldSelection()
+            return .handled
+        }
+    }
+
+    private func move(_ direction: GameViewModel.MoveDirection) -> KeyPress.Result {
+        model.moveCursor(direction)
+        return .handled
+    }
+
+    private func activate() -> KeyPress.Result {
+        model.activateCursor()
+        return .handled
+    }
+
+    /// ドロップ受けを条件付きで張る（スナップショット描画時は無効化）。
+    @ViewBuilder
+    private func cardDropTarget(_ content: some View, on target: Card?) -> some View {
+        if dropTargetsEnabled {
+            content.dropDestination(for: CardDragPayload.self) { payloads, _ in
+                model.dropHandCard(id: payloads.first?.id, on: target)
+            }
+        } else {
+            content
+        }
     }
 
     // MARK: - 区画
@@ -51,12 +98,16 @@ public struct GameView: View {
                 if let line = model.opponentLine {
                     Text(line)
                         .font(.caption)
-                        .padding(6)
-                        .background(.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(.black)
+                        .multilineTextAlignment(.leading)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 10))
+                        .frame(maxWidth: 380, alignment: .trailing)
                 }
             }
-            CapturedRow(cards: model.game.captured(for: .opponent), cardWidth: 30)
             YakuBadges(yakus: model.opponentYaku)
+            CapturedDetail(cards: model.game.captured(for: .opponent), cardWidth: 30)
         }
     }
 
@@ -66,19 +117,35 @@ public struct GameView: View {
                 columns: [GridItem(.adaptive(minimum: 56, maximum: 72), spacing: 8)],
                 spacing: 8
             ) {
-                ForEach(model.game.field) { card in
-                    FieldCardView(
-                        card: card,
-                        highlighted: model.fieldCandidates.contains(card)
-                    ) {
-                        model.tapFieldCard(card)
-                    }
+                ForEach(Array(model.game.field.enumerated()), id: \.element.id) { index, card in
+                    cardDropTarget(
+                        FieldCardView(
+                            card: card,
+                            highlighted: model.highlightedFieldCards.contains(card),
+                            focused: model.cursor == .field(index),
+                            dimmed: model.isSelectingField && !model.fieldCandidates.contains(card),
+                            tappable: model.fieldCandidates.contains(card)
+                        ) {
+                            model.tapFieldCard(card)
+                        },
+                        on: card)
                 }
             }
-            HStack {
-                Label("山 \(model.game.deck.count)", systemImage: "square.stack")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
+            .background {
+                // 空きへの捨て札ドロップ受け（透明）
+                cardDropTarget(Color.clear.contentShape(Rectangle()), on: nil)
+            }
+            HStack(spacing: 12) {
+                DeckStack(remaining: model.game.deck.count)
+                if let drawn = model.drawnCard {
+                    HStack(spacing: 4) {
+                        Text("引いた札:")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.8))
+                        CardImage(drawn)
+                            .frame(width: 30)
+                    }
+                }
                 Spacer()
                 statusText
             }
@@ -91,7 +158,7 @@ public struct GameView: View {
             case .selectHand:
                 Text("手札を選んでください")
             case .selectField:
-                Text("取る場札を選んでください")
+                Text("取る場札を選んでください（Esc で戻る）")
             case .opponentTurn:
                 Text("相手の番…")
             case .decideKoikoi, .roundEnd, .matchEnd:
@@ -105,26 +172,29 @@ public struct GameView: View {
     private var playerArea: some View {
         VStack(alignment: .leading, spacing: 4) {
             YakuBadges(yakus: model.playerYaku)
-            CapturedRow(cards: model.game.captured(for: .player), cardWidth: 30)
+            CapturedDetail(
+                cards: model.game.captured(for: .player),
+                reaches: model.playerReaches,
+                cardWidth: 30)
             LazyVGrid(
                 columns: [GridItem(.adaptive(minimum: 56, maximum: 72), spacing: 8)],
                 spacing: 8
             ) {
-                ForEach(model.game.hand(for: .player)) { card in
-                    Button {
+                ForEach(Array(model.game.hand(for: .player).enumerated()), id: \.element.id) { index, card in
+                    HandCardView(
+                        card: card,
+                        matchCount: model.game.matchingFieldCards(for: card).count,
+                        selected: model.pendingHandCard == card,
+                        focused: model.cursor == .hand(index),
+                        tappable: model.prompt == .selectHand || model.pendingHandCard != nil
+                    ) {
                         model.tapHandCard(card)
-                    } label: {
-                        CardImage(card)
-                            .overlay {
-                                if model.pendingHandCard == card {
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .stroke(.yellow, lineWidth: 3)
-                                }
-                            }
                     }
-                    .buttonStyle(.plain)
-                    // 手札選択中と場札選択中（解除・選び直し）はタップ可能
-                    .disabled(model.prompt != .selectHand && model.pendingHandCard == nil)
+                    #if os(macOS)
+                    .onHover { hovering in
+                        model.hoverHandCard = hovering ? card : nil
+                    }
+                    #endif
                 }
             }
             .padding(.vertical, 4)
@@ -144,8 +214,10 @@ public struct GameView: View {
                 HStack(spacing: 16) {
                     Button("こいこい！") { model.decide(koikoi: true) }
                         .buttonStyle(.borderedProminent)
+                        .overlay { dialogFocusRing(when: model.dialogKoikoiSelected) }
                     Button("勝負") { model.decide(koikoi: false) }
                         .buttonStyle(.bordered)
+                        .overlay { dialogFocusRing(when: !model.dialogKoikoiSelected) }
                 }
             }
         case .roundEnd(let outcome):
@@ -169,6 +241,12 @@ public struct GameView: View {
         default:
             EmptyView()
         }
+    }
+
+    private func dialogFocusRing(when selected: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 8)
+            .stroke(.yellow, lineWidth: selected ? 3 : 0)
+            .padding(-3)
     }
 
     private func dialog(@ViewBuilder content: () -> some View) -> some View {
