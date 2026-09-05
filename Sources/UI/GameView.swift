@@ -22,11 +22,27 @@ public struct GameView: View {
     }()
     /// 手札/場札 8 枚が 1 行に収まる幅（8×64 + 7×8 スペーシング + 左右パディング）。
     static let minBoardWidth: CGFloat = cardTileWidth * 8 + 8 * 7 + boardPadding * 2
+    private static var macMinBoardWidth: CGFloat? {
+        #if os(macOS)
+        return minBoardWidth
+        #else
+        return nil
+        #endif
+    }
 
     /// D&D の受け皿を張るか。ImageRenderer はドロップ受けのバッキングビューを
     /// 描画できず禁止マークのプレースホルダになるため、スナップショット描画時のみ
     /// false にする（実アプリでは常に true）。
     private let dropTargetsEnabled: Bool
+
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass)
+    private var horizontalSizeClass
+    /// iPhone 縦のように幅が狭い環境（右上のスコアボードと場所を取り合う）。
+    private var isCompactWidth: Bool { horizontalSizeClass == .compact }
+    #else
+    private var isCompactWidth: Bool { false }
+    #endif
 
     public init(
         model: GameViewModel,
@@ -57,8 +73,9 @@ public struct GameView: View {
                 playerArea.layoutPriority(1)
             }
             .padding(Self.boardPadding)
-            // 場札・手札 8 枚が 1 行に収まる最小幅
-            .frame(minWidth: Self.minBoardWidth)
+            // 場札・手札 8 枚が 1 行に収まる最小幅（ウィンドウをリサイズできる macOS のみ。
+            // iPhone では画面幅を超えて盤面がはみ出すため、グリッドの折り返しに任せる）
+            .frame(minWidth: Self.macMinBoardWidth)
         }
         .overlay(alignment: .topTrailing) {
             ScoreboardPanel(
@@ -114,9 +131,11 @@ public struct GameView: View {
 
     private var opponentArea: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
+            // 幅が狭いときは裏札を小さく重ねて並べ、右上のスコアボードに潜り込ませない
+            HStack(spacing: isCompactWidth ? -9 : 8) {
                 ForEach(0..<model.game.hand(for: .opponent).count, id: \.self) { _ in
-                    CardBack().frame(width: 34)
+                    CardBack()
+                        .frame(width: isCompactWidth ? 26 : 34)
                 }
                 Spacer()
             }

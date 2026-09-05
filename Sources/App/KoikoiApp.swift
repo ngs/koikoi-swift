@@ -17,22 +17,16 @@ struct KoikoiApp: App {
         .defaultWindowPlacement { _, _ in
             WindowPlacement(.utilityPanel)
         }
+        #elseif os(macOS)
+        // 対局は 1 つだけ自動保存・自動復元するため、複数ウィンドウは開かない
+        Window("Koikoi", id: "main") {
+            GameSessionView()
+        }
+        .defaultSize(width: 900, height: 700)
         #else
-        // 1 対局 = 1 ファイル（.koikoi）。未保存の変更は閉じるときに
-        // OS が保存を促す（Chess.app と同様の文書ベース構成）。
-        DocumentGroup(
-            newDocument: { KoikoiGameDocument() },
-            editor: { configuration in
-                GameDocumentView(document: configuration.document)
-            })
-        #endif
-
-        #if os(iOS)
-        // iOS は文書ブラウザの前に「新しい対局」から始められるランチャーを出す
-        DocumentGroupLaunchScene("こいこい") {
-            NewDocumentButton("新しい対局")
-        } background: {
-            Color(red: 0.10, green: 0.28, blue: 0.20)
+        // 起動したら前回の対局を自動復元し、無ければ対局設定から始める
+        WindowGroup {
+            GameSessionView()
         }
         #endif
     }

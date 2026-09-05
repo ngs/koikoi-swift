@@ -35,6 +35,15 @@
 
 SPM のテストは `Tests/KoikoiCoreTests/`・`Tests/KoikoiAITests/`（`swift test` で回る。Xcode 不要）。
 
+### 対局の保存（自動保存・起動時復元）
+
+進行中の対局は 1 つだけ Application Support に自動保存する
+（`Sources/UI/GameStore.swift`・`Koikoi/current.koikoi`）。起動時に保存があればそのまま復元し、
+無ければ対局設定画面から始める（文書ブラウザ / `DocumentGroup` は使わない = ユーザーに
+ファイルを意識させない）。保存の中身はシードと全指し手の `GameRecord` で、復元はリプレイによる。
+「対局をやめる」で保存は破棄される。`KoikoiGameDocument` と `UTType.koikoiGame` は
+visionOS の書き出し / 読み込み（fileExporter / fileImporter）用に残している。
+
 ### visionOS
 
 visionOS は平面ウィンドウ移植ではなく **OS の特徴を最大限活かす**方針: volumetric window / RealityKit で札を空間に置き、視線 + ピンチで選択、没入空間（和室・座卓）を提供する。visionOS 固有コードは `Sources/App/` 内で `#if os(visionOS)` または専用ディレクトリに置く。

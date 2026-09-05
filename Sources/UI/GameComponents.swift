@@ -290,6 +290,10 @@ struct PulsingRing: View {
 struct DeckStack: View {
     let remaining: Int
     private let cardWidth: CGFloat = 40
+    /// 札の高さは縦の提案に委ねず比率から確定させる。
+    /// 高さが未確定だと盤面が縦に詰まったとき aspectRatio(.fit) が 0 まで潰れ、
+    /// 山札が消える（iPhone で束が表示されなかった原因）。
+    private var cardHeight: CGFloat { cardWidth / Card.aspectRatio }
     /// 1 枚あたりの積み上がり（縁が見える程度）。
     private let step: CGFloat = 1.1
 
@@ -298,7 +302,7 @@ struct DeckStack: View {
             ZStack(alignment: .bottomLeading) {
                 ForEach(0..<remaining, id: \.self) { index in
                     CardBack(shadowed: false)
-                        .frame(width: cardWidth)
+                        .frame(width: cardWidth, height: cardHeight)
                         .offset(x: CGFloat(index) * 0.3, y: -CGFloat(index) * step)
                         .lifted(CGFloat(index) * 0.6)  // visionOS: 実際に厚みが出る
                 }
@@ -311,8 +315,7 @@ struct DeckStack: View {
         } else {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(.white.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [5]))
-                .aspectRatio(Card.aspectRatio, contentMode: .fit)
-                .frame(width: cardWidth)
+                .frame(width: cardWidth, height: cardHeight)
         }
     }
 }

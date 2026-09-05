@@ -15,6 +15,7 @@ struct SpatialBoardView: View {
     @State private var exporting = false
     @State private var importing = false
     @State private var board = BoardScene()
+    private let store = GameStore.shared
 
     var body: some View {
         GeometryReader3D { proxy in
@@ -45,7 +46,13 @@ struct SpatialBoardView: View {
                 setupPanel
             }
         }
-        .onAppear { GameCenterService.shared.authenticate() }
+        .onAppear {
+            GameCenterService.shared.authenticate()
+            // 起動時は保存済みの対局をそのまま復元する
+            if model == nil, let saved = store.load() {
+                start(record: saved)
+            }
+        }
         .fileExporter(
             isPresented: $exporting,
             document: model.map { KoikoiGameDocument(record: $0.makeRecord(moves: moves)) },
@@ -84,13 +91,21 @@ struct SpatialBoardView: View {
 
     private func start(record: GameRecord) {
         moves = record.moves
+        store.save(record)
         // 2D 用の獲得アニメ演出（適用前ディレイ）は使わず、3D 側のタイムラインで表現する
         let model = GameViewModel(record: record, captureAnimationsEnabled: false)
-        model.onMoveApplied = { moves.append($0) }
+        model.onMoveApplied = { move in
+            moves.append(move)
+            store.save(
+                GameRecord(
+                    rounds: record.rounds, difficulty: record.difficulty,
+                    seed: record.seed, moves: moves))
+        }
         self.model = model
     }
 
     private func quitToTitle() {
+        store.clear()
         model = nil
         moves = []
     }

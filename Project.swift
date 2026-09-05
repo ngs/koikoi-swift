@@ -78,17 +78,6 @@ let project = Project(
                             "public.filename-extension": ["koikoi"]
                         ]
                     ]
-                ],
-                // CFBundleDocumentTypes を宣言するアプリは開き方の宣言が必須
-                // （無いとアップロード時に警告 90737 が出る）
-                "LSSupportsOpeningDocumentsInPlace": .boolean(true),
-                "CFBundleDocumentTypes": [
-                    [
-                        "CFBundleTypeName": "Koikoi game",
-                        "CFBundleTypeRole": "Editor",
-                        "LSHandlerRank": "Owner",
-                        "LSItemContentTypes": ["io.ngs.Koikoi.game"]
-                    ]
                 ]
             ]),
             sources: ["Sources/App/**"],
