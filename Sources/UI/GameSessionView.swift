@@ -80,11 +80,12 @@ public struct GameSessionView: View {
         }
     }
 
+    /// Game Center のアクセスポイント（左上固定）と重ならないよう右上に置く。
     private static var quitPlacement: ToolbarItemPlacement {
         #if os(macOS)
-        return .navigation
+        return .primaryAction
         #else
-        return .topBarLeading
+        return .topBarTrailing
         #endif
     }
 
