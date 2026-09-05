@@ -72,13 +72,13 @@ import Testing
         var game = makeGame(hand: [], field: [])
         game.hands[.opponent] = cards(0, 1, 2, 4, 5)
         let koikoi = HeuristicOpponent.decideKoikoi(
-            game: game, seat: .opponent, yakus: [Yaku(.sankou, 5)], difficulty: .easy)
+            game: game, seat: .opponent, yakus: [Yaku(.threeBrights, 5)], difficulty: .easy)
         #expect(!koikoi)
     }
 
     @Test func decideKoikoiNormal() {
         var game = makeGame(hand: [], field: [])
-        let yakus = [Yaku(.sankou, 5)]
+        let yakus = [Yaku(.threeBrights, 5)]
         // 手札3枚・5文 → こいこいする
         game.hands[.opponent] = cards(0, 1, 2)
         #expect(
@@ -93,12 +93,12 @@ import Testing
         game.hands[.opponent] = cards(0, 1, 2)
         #expect(
             !HeuristicOpponent.decideKoikoi(
-                game: game, seat: .opponent, yakus: [Yaku(.ameShikou, 7)], difficulty: .normal))
+                game: game, seat: .opponent, yakus: [Yaku(.rainyFourBrights, 7)], difficulty: .normal))
     }
 
     @Test func decideKoikoiHard() {
         var game = makeGame(hand: [], field: [])
-        let yakus = [Yaku(.sankou, 5)]
+        let yakus = [Yaku(.threeBrights, 5)]
         // 手札3枚・5文 → こいこいする
         game.hands[.opponent] = cards(0, 1, 2)
         #expect(
@@ -113,13 +113,13 @@ import Testing
         game.hands[.opponent] = cards(0, 1, 2)
         #expect(
             !HeuristicOpponent.decideKoikoi(
-                game: game, seat: .opponent, yakus: [Yaku(.gokou, 10)], difficulty: .hard))
+                game: game, seat: .opponent, yakus: [Yaku(.fiveBrights, 10)], difficulty: .hard))
         // 手札2枚・9文 → こいこいする
         game.hands[.opponent] = cards(0, 1)
         #expect(
             HeuristicOpponent.decideKoikoi(
                 game: game, seat: .opponent,
-                yakus: [Yaku(.shikou, 8), Yaku(.kasu, 1)], difficulty: .hard))
+                yakus: [Yaku(.fourBrights, 8), Yaku(.chaff, 1)], difficulty: .hard))
     }
 
     // MARK: - 評価関数

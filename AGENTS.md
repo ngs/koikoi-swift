@@ -17,7 +17,7 @@
 - **Project generation**: Tuist (`Project.swift`) + Swift Package Manager (`Package.swift`)
 - **Code quality**: SwiftLint / Periphery
 - **CI/CD**: GitHub Actions + fastlane
-- **Localization**: String Catalogs（開発言語は英語 + 日本語）
+- **Localization**: String Catalogs（primary language は英語 + 日本語訳）
 - **Bundle ID**: `io.ngs.Koikoi`
 
 ### Modules
@@ -61,8 +61,26 @@ tuist generate --no-open   # Koikoi.xcworkspace を生成
 Scripts/lint.sh            # SwiftLint
 ```
 
+### ローカライズ
+
+**ソースコード内の文字列リテラルは英語のみ。日本語は String Catalog の翻訳値としてのみ持つ。**
+Primary language は英語で、`Sources/Core` を含む全モジュールが英語名を正とする
+（`YakuKind.displayName`・`Month.monthName` / `flowerName`・`CardType.name`・`Card.name`・
+`Difficulty.label`）。go-koikoi の日本語名は各定義のコメントに添える。
+
+| カタログ | バンドル | 中身 |
+|---|---|---|
+| `Sources/UI/Resources/Localizable.xcstrings` | `Bundle.module`（KoikoiUI） | 役・月・花・難易度・札名と UI 文言 |
+| `Sources/UI/Resources/CardTypes.xcstrings` | 同上（テーブル `CardTypes`） | 札種名。役の「Ribbons」（タン）と札種の「Ribbons」（短）は英語が同じで訳が違うため別テーブルにする |
+| `Resources/Localizable.xcstrings` | メインバンドル | `Sources/App`（visionOS の操作パネル）の文言 |
+
+Core の英語名をそのままキーにして引く拡張は `Sources/UI/Localization.swift` にある。
+KoikoiUI 内のテキストは必ず `bundle: .module` を渡す。翻訳の抜けとキーの漏れは
+`Tests/KoikoiUITests/LocalizationTests.swift` が検出する。
+
 ## 開発上の注意
 
 - ルール変更・役判定の修正は必ず対応するテストとセットで（go-koikoi のテストを移植したものが基準線）
+- ソース内に日本語の文字列リテラルを足さない（表示文言は英語キー + String Catalog の日本語訳）
 - 非自明な変更は master 直 push せず feature branch → PR → レビュー経由
 - FoundationModels は `SystemLanguageModel.default.availability` を確認し、不可用時は台詞なしで進行（ゲーム進行を LLM 応答でブロックしない）

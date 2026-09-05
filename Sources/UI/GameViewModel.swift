@@ -70,6 +70,9 @@ public final class GameViewModel {
     public var aiStepDelay: Duration
     /// 手が適用されるたびに呼ばれる（プレイヤー・AI 双方。対局記録用）。
     public var onMoveApplied: ((Move) -> Void)?
+    /// 対局が終わった時に一度だけ呼ばれる（保存の破棄などに使う）。
+    /// 引数は勝者（引き分けは nil）。
+    public var onMatchEnd: ((Seat?) -> Void)?
     private var isReplaying = false
 
     private var rng: GameRandom
@@ -393,6 +396,9 @@ public final class GameViewModel {
             GameCenterService.shared.reportMatchEnd(
                 playerWon: winner == .player,
                 playerScore: game.score(for: .player))
+            // 結果ダイアログ表示中に強制終了されても再開しないよう、
+            // ここで保存を破棄させる（「タイトルへ」を待たない）。
+            onMatchEnd?(winner)
             return
         }
         advanceRound()

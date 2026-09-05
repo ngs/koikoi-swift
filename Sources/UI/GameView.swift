@@ -10,8 +10,10 @@ public struct GameView: View {
     /// 札の獲得アニメーション用（ゾーン間の移動を matchedGeometryEffect で結ぶ）。
     @Namespace private var cardSpace
     private let onExit: (() -> Void)?
-    /// 札タイルの固定幅（シュリンクさせない）。
+    /// 札タイルの基準幅（= 下限。iPhone や狭いウィンドウではこの幅で折り返す）。
     static let cardTileWidth: CGFloat = 64
+    /// 札タイルの上限幅（iPad 13 インチや広い macOS ウィンドウでの拡大上限）。
+    static let maxCardTileWidth: CGFloat = 112
     /// 盤面の外周パディング。visionOS はウィンドウの角丸に食い込まないよう広めに取る。
     static let boardPadding: CGFloat = {
         #if os(visionOS)
@@ -28,6 +30,15 @@ public struct GameView: View {
         #else
         return nil
         #endif
+    }
+
+    /// 盤面幅から札タイル幅を決める。
+    /// 手札/場札 8 枚 + 7 スペーシングが 1 行に収まる最大幅を取り、64…112pt に丸める
+    /// （iPhone は常に下限 64 になり、従来どおりグリッドが折り返す）。
+    static func tileWidth(forBoardWidth width: CGFloat) -> CGFloat {
+        guard width > 0 else { return cardTileWidth }
+        let available = width - boardPadding * 2 - 8 * 7
+        return min(max(available / 8, cardTileWidth), maxCardTileWidth)
     }
 
     /// D&D の受け皿を張るか。ImageRenderer はドロップ受けのバッキングビューを
@@ -55,31 +66,16 @@ public struct GameView: View {
     }
 
     public var body: some View {
-        ZStack {
-            #if os(visionOS)
-            // visionOS はウィンドウのガラスをそのまま透過させる（緑ベタは敷かない）
-            Color.clear
-            #else
-            Color.koikoiTable
-                .ignoresSafeArea()
-            #endif
-            // 相手陣は上端・自陣は下端に固定し、山札・場札はセンターに置く
-            // （ウィンドウを広げた分は手札とフィールドの間に入る）
-            VStack(alignment: .leading, spacing: 12) {
-                opponentArea.layoutPriority(1)
-                Spacer(minLength: 0)
-                fieldArea.layoutPriority(1)
-                Spacer(minLength: 0)
-                playerArea.layoutPriority(1)
-            }
-            .padding(Self.boardPadding)
-            // 場札・手札 8 枚が 1 行に収まる最小幅（ウィンドウをリサイズできる macOS のみ。
-            // iPhone では画面幅を超えて盤面がはみ出すため、グリッドの折り返しに任せる）
-            .frame(minWidth: Self.macMinBoardWidth)
+        // 盤面幅から札の大きさを決める（iPad 13 インチや広い macOS ウィンドウで拡大する）
+        GeometryReader { proxy in
+            board(tile: Self.tileWidth(forBoardWidth: proxy.size.width))
         }
+        // 場札・手札 8 枚が 1 行に収まる最小幅（ウィンドウをリサイズできる macOS のみ。
+        // iPhone では画面幅を超えて盤面がはみ出すため、グリッドの折り返しに任せる）
+        .frame(minWidth: Self.macMinBoardWidth)
         .overlay(alignment: .topTrailing) {
             ScoreboardPanel(
-                monthName: Month(rawValue: (model.game.round - 1) % 12)?.oldName ?? "",
+                monthName: Month(rawValue: (model.game.round - 1) % 12)?.localizedMonthName ?? "",
                 round: model.game.round,
                 maxRounds: model.game.maxRounds,
                 playerScore: model.game.score(for: .player),
@@ -103,6 +99,29 @@ public struct GameView: View {
             model.cancelFieldSelection()
             return .handled
         }
+    }
+
+    private func board(tile: CGFloat) -> some View {
+        ZStack {
+            #if os(visionOS)
+            // visionOS はウィンドウのガラスをそのまま透過させる（緑ベタは敷かない）
+            Color.clear
+            #else
+            Color.koikoiTable
+                .ignoresSafeArea()
+            #endif
+            // 相手陣は上端・自陣は下端に固定し、山札・場札はセンターに置く
+            // （ウィンドウを広げた分は手札とフィールドの間に入る）
+            VStack(alignment: .leading, spacing: 12) {
+                opponentArea(tile: tile).layoutPriority(1)
+                Spacer(minLength: 0)
+                fieldArea(tile: tile).layoutPriority(1)
+                Spacer(minLength: 0)
+                playerArea(tile: tile).layoutPriority(1)
+            }
+            .padding(Self.boardPadding)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func move(_ direction: GameViewModel.MoveDirection) -> KeyPress.Result {
@@ -129,25 +148,26 @@ public struct GameView: View {
 
     // MARK: - 区画
 
-    private var opponentArea: some View {
+    private func opponentArea(tile: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             // 幅が狭いときは裏札を小さく重ねて並べ、右上のスコアボードに潜り込ませない
             HStack(spacing: isCompactWidth ? -9 : 8) {
                 ForEach(0..<model.game.hand(for: .opponent).count, id: \.self) { _ in
                     CardBack()
-                        .frame(width: isCompactWidth ? 26 : 34)
+                        .frame(width: isCompactWidth ? 26 : tile * 0.53)
                 }
                 Spacer()
             }
             YakuBadges(yakus: model.opponentYaku)
-            CapturedDetail(cards: model.game.captured(for: .opponent), cardWidth: 30)
+            CapturedDetail(
+                cards: model.game.captured(for: .opponent), cardWidth: tile * 0.47)
         }
     }
 
-    private var fieldArea: some View {
+    private func fieldArea(tile: CGFloat) -> some View {
         VStack(spacing: 8) {
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: Self.cardTileWidth, maximum: Self.cardTileWidth), spacing: 8)],
+                columns: [GridItem(.adaptive(minimum: tile, maximum: tile), spacing: 8)],
                 spacing: 8
             ) {
                 ForEach(Array(model.game.field.enumerated()), id: \.element.id) { index, card in
@@ -169,7 +189,7 @@ public struct GameView: View {
                         if let animation = model.captureAnimation, animation.target == card {
                             if animation.fliesFromSource {
                                 CardImage(animation.movingCard)
-                                    .frame(width: Self.cardTileWidth * 0.9)
+                                    .frame(width: tile * 0.9)
                                     .matchedGeometryEffect(
                                         id: animation.movingCard.id, in: cardSpace)
                                     .offset(x: 8, y: -8)
@@ -177,7 +197,7 @@ public struct GameView: View {
                                     .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
                             } else {
                                 CardImage(animation.movingCard)
-                                    .frame(width: Self.cardTileWidth * 0.9)
+                                    .frame(width: tile * 0.9)
                                     .offset(x: 8, y: -8)
                                     .lifted(26)
                                     .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
@@ -193,14 +213,14 @@ public struct GameView: View {
                 cardDropTarget(Color.clear.contentShape(Rectangle()), on: nil)
             }
             HStack(spacing: 12) {
-                DeckStack(remaining: model.game.deck.count)
+                DeckStack(remaining: model.game.deck.count, cardWidth: tile * 0.62)
                 if let drawn = model.drawnCard, model.captureAnimation?.movingCard != drawn {
                     HStack(spacing: 4) {
-                        Text("引いた札:")
+                        Text("Drawn:", bundle: .module)
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.8))
                         CardImage(drawn)
-                            .frame(width: 30)
+                            .frame(width: tile * 0.47)
                             .matchedGeometryEffect(id: drawn.id, in: cardSpace)
                     }
                 }
@@ -214,11 +234,11 @@ public struct GameView: View {
         Group {
             switch model.prompt {
             case .selectHand:
-                Text("手札を選んでください")
+                Text("Choose a card from your hand", bundle: .module)
             case .selectField:
-                Text("取る場札を選んでください（Esc で戻る）")
+                Text("Choose a field card to take (Esc to cancel)", bundle: .module)
             case .opponentTurn:
-                Text("相手の番…")
+                Text("Opponent's turn…", bundle: .module)
             case .decideKoikoi, .roundEnd, .matchEnd:
                 Text("")
             }
@@ -227,11 +247,12 @@ public struct GameView: View {
         .foregroundStyle(.yellow)
     }
 
-    private var playerArea: some View {
+    private func playerArea(tile: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             YakuBadges(yakus: model.playerYaku)
             HStack(alignment: .bottom, spacing: 12) {
-                CapturedDetail(cards: model.game.captured(for: .player), cardWidth: 30)
+                CapturedDetail(
+                    cards: model.game.captured(for: .player), cardWidth: tile * 0.47)
                 Spacer(minLength: 0)
                 // リーチは右側に寄せて獲得札と分離する
                 if !model.playerReaches.isEmpty {
@@ -239,7 +260,7 @@ public struct GameView: View {
                 }
             }
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: Self.cardTileWidth, maximum: Self.cardTileWidth), spacing: 8)],
+                columns: [GridItem(.adaptive(minimum: tile, maximum: tile), spacing: 8)],
                 spacing: 8
             ) {
                 // がっちゃんこ中の札は手札からは消し、場札側で描画する
@@ -275,34 +296,44 @@ public struct GameView: View {
         switch model.prompt {
         case .decideKoikoi(let newYaku):
             dialog {
-                Text("役が成立！").font(.title2.bold())
+                Text("Yaku!", bundle: .module).font(.title2.bold())
                 ForEach(newYaku, id: \.self) { yaku in
-                    Text("\(yaku.kind.rawValue)（\(yaku.points)文）")
+                    Text(verbatim: yaku.localizedSummary)
                 }
                 HStack(spacing: 16) {
-                    Button("こいこい！") { model.decide(koikoi: true) }
-                        .buttonStyle(.borderedProminent)
-                        .overlay { dialogFocusRing(when: model.dialogKoikoiSelected) }
-                    Button("勝負") { model.decide(koikoi: false) }
-                        .buttonStyle(.bordered)
-                        .overlay { dialogFocusRing(when: !model.dialogKoikoiSelected) }
+                    Button(String(localized: "Koi-Koi!", bundle: .module)) {
+                        model.decide(koikoi: true)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .overlay { dialogFocusRing(when: model.dialogKoikoiSelected) }
+                    Button(String(localized: "Stop", bundle: .module)) {
+                        model.decide(koikoi: false)
+                    }
+                    .buttonStyle(.bordered)
+                    .overlay { dialogFocusRing(when: !model.dialogKoikoiSelected) }
                 }
             }
         case .roundEnd(let outcome):
             dialog {
-                Text(roundEndTitle(outcome)).font(.title2.bold())
+                Text(verbatim: KoikoiText.roundEndTitle(winner: outcome.winner))
+                    .font(.title2.bold())
                 if outcome.winner != nil {
-                    Text("\(outcome.points)文獲得")
+                    Text(verbatim: KoikoiText.points(outcome.points))
                 }
-                Button("次へ") { model.proceedAfterRound() }
-                    .buttonStyle(.borderedProminent)
+                Button(String(localized: "Next", bundle: .module)) {
+                    model.proceedAfterRound()
+                }
+                .buttonStyle(.borderedProminent)
             }
         case .matchEnd(let winner):
             dialog {
-                Text(matchEndTitle(winner)).font(.title.bold())
-                Text("あなた \(model.game.score(for: .player))文 - 相手 \(model.game.score(for: .opponent))文")
+                Text(verbatim: KoikoiText.matchEndTitle(winner: winner)).font(.title.bold())
+                Text(
+                    verbatim: KoikoiText.finalScore(
+                        player: model.game.score(for: .player),
+                        opponent: model.game.score(for: .opponent)))
                 if let onExit {
-                    Button("タイトルへ") { onExit() }
+                    Button(String(localized: "Back to Title", bundle: .module)) { onExit() }
                         .buttonStyle(.borderedProminent)
                 }
             }
@@ -326,24 +357,8 @@ public struct GameView: View {
         .shadow(radius: 12)
         .lifted(48)  // visionOS: ダイアログは盤の手前に浮かべる
     }
-
-    private func roundEndTitle(_ outcome: RoundOutcome) -> String {
-        switch outcome.winner {
-        case .player: "あなたの勝ち！"
-        case .opponent: "相手の勝ち"
-        case nil: "流局"
-        }
-    }
-
-    private func matchEndTitle(_ winner: Seat?) -> String {
-        switch winner {
-        case .player: "対局勝利！"
-        case .opponent: "対局敗北…"
-        case nil: "引き分け"
-        }
-    }
 }
 
-#Preview("対局") {
+#Preview("Game Board") {
     GameView(model: GameViewModel(rounds: 3, difficulty: .normal, seed: 42))
 }

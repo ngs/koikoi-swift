@@ -69,7 +69,7 @@ import Testing
         game.deck = cards(46, 47, 45)
 
         let sim = RoundSimulator(
-            game: game, phase: .decideKoikoi(.opponent, newYaku: [Yaku(.gokou, 10)]))
+            game: game, phase: .decideKoikoi(.opponent, newYaku: [Yaku(.fiveBrights, 10)]))
         var rng = GameRandom(seed: 5)
         let engine = ISMCTSEngine(configuration: ISMCTSConfiguration(iterations: 300))
         let move = engine.chooseMove(in: sim, for: .opponent, rng: &rng)

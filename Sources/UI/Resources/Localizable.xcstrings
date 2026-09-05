@@ -1,0 +1,1370 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Five Brights": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "五光"
+          }
+        }
+      }
+    },
+    "Four Brights": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "四光"
+          }
+        }
+      }
+    },
+    "Rainy Four Brights": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "雨四光"
+          }
+        }
+      }
+    },
+    "Three Brights": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "三光"
+          }
+        }
+      }
+    },
+    "Boar, Deer, Butterfly": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "猪鹿蝶"
+          }
+        }
+      }
+    },
+    "Cherry Blossom Viewing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "花見で一杯"
+          }
+        }
+      }
+    },
+    "Moon Viewing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "月見で一杯"
+          }
+        }
+      }
+    },
+    "Red Poetry Ribbons": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "赤短"
+          }
+        }
+      }
+    },
+    "Blue Ribbons": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "青短"
+          }
+        }
+      }
+    },
+    "Red and Blue Ribbons": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "赤短・青短の重複"
+          }
+        }
+      }
+    },
+    "Animals": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タネ"
+          }
+        }
+      }
+    },
+    "Ribbons": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タン"
+          }
+        }
+      }
+    },
+    "Chaff": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カス"
+          }
+        }
+      }
+    },
+    "January": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "睦月"
+          }
+        }
+      }
+    },
+    "February": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如月"
+          }
+        }
+      }
+    },
+    "March": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "弥生"
+          }
+        }
+      }
+    },
+    "April": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卯月"
+          }
+        }
+      }
+    },
+    "May": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "皐月"
+          }
+        }
+      }
+    },
+    "June": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "水無月"
+          }
+        }
+      }
+    },
+    "July": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文月"
+          }
+        }
+      }
+    },
+    "August": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "葉月"
+          }
+        }
+      }
+    },
+    "September": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長月"
+          }
+        }
+      }
+    },
+    "October": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "神無月"
+          }
+        }
+      }
+    },
+    "November": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "霜月"
+          }
+        }
+      }
+    },
+    "December": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "師走"
+          }
+        }
+      }
+    },
+    "Pine": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松"
+          }
+        }
+      }
+    },
+    "Plum": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "梅"
+          }
+        }
+      }
+    },
+    "Cherry Blossom": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桜"
+          }
+        }
+      }
+    },
+    "Wisteria": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藤"
+          }
+        }
+      }
+    },
+    "Iris": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菖蒲"
+          }
+        }
+      }
+    },
+    "Peony": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "牡丹"
+          }
+        }
+      }
+    },
+    "Bush Clover": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "萩"
+          }
+        }
+      }
+    },
+    "Pampas Grass": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "芒"
+          }
+        }
+      }
+    },
+    "Chrysanthemum": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菊"
+          }
+        }
+      }
+    },
+    "Maple": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紅葉"
+          }
+        }
+      }
+    },
+    "Willow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "柳"
+          }
+        }
+      }
+    },
+    "Paulownia": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桐"
+          }
+        }
+      }
+    },
+    "Easy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "かんたん"
+          }
+        }
+      }
+    },
+    "Normal": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ふつう"
+          }
+        }
+      }
+    },
+    "Hard": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "つよい"
+          }
+        }
+      }
+    },
+    "Expert": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "たつじん"
+          }
+        }
+      }
+    },
+    "Pine and Crane": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松に鶴"
+          }
+        }
+      }
+    },
+    "Pine with Red Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松に赤短"
+          }
+        }
+      }
+    },
+    "Pine Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松のカス１"
+          }
+        }
+      }
+    },
+    "Pine Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松のカス２"
+          }
+        }
+      }
+    },
+    "Plum and Bush Warbler": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "梅に鶯"
+          }
+        }
+      }
+    },
+    "Plum with Red Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "梅に赤短"
+          }
+        }
+      }
+    },
+    "Plum Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "梅のカス１"
+          }
+        }
+      }
+    },
+    "Plum Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "梅のカス２"
+          }
+        }
+      }
+    },
+    "Cherry Blossom Curtain": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桜に幕"
+          }
+        }
+      }
+    },
+    "Cherry Blossom with Red Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桜に赤短"
+          }
+        }
+      }
+    },
+    "Cherry Blossom Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桜のカス１"
+          }
+        }
+      }
+    },
+    "Cherry Blossom Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桜のカス２"
+          }
+        }
+      }
+    },
+    "Wisteria and Cuckoo": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藤に不如帰"
+          }
+        }
+      }
+    },
+    "Wisteria with Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藤に短冊"
+          }
+        }
+      }
+    },
+    "Wisteria Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藤のカス１"
+          }
+        }
+      }
+    },
+    "Wisteria Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藤のカス２"
+          }
+        }
+      }
+    },
+    "Iris and Eight-Plank Bridge": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菖蒲に八橋"
+          }
+        }
+      }
+    },
+    "Iris with Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菖蒲に短冊"
+          }
+        }
+      }
+    },
+    "Iris Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菖蒲のカス１"
+          }
+        }
+      }
+    },
+    "Iris Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菖蒲のカス２"
+          }
+        }
+      }
+    },
+    "Peony and Butterflies": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "牡丹に蝶"
+          }
+        }
+      }
+    },
+    "Peony with Blue Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "牡丹に短冊"
+          }
+        }
+      }
+    },
+    "Peony Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "牡丹のカス１"
+          }
+        }
+      }
+    },
+    "Peony Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "牡丹のカス２"
+          }
+        }
+      }
+    },
+    "Bush Clover and Boar": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "萩に猪"
+          }
+        }
+      }
+    },
+    "Bush Clover with Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "萩に短冊"
+          }
+        }
+      }
+    },
+    "Bush Clover Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "萩のカス１"
+          }
+        }
+      }
+    },
+    "Bush Clover Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "萩のカス２"
+          }
+        }
+      }
+    },
+    "Pampas Grass and Moon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "芒に月"
+          }
+        }
+      }
+    },
+    "Pampas Grass and Geese": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "芒に雁"
+          }
+        }
+      }
+    },
+    "Pampas Grass Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "芒のカス１"
+          }
+        }
+      }
+    },
+    "Pampas Grass Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "芒のカス２"
+          }
+        }
+      }
+    },
+    "Chrysanthemum and Sake Cup": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菊に盃"
+          }
+        }
+      }
+    },
+    "Chrysanthemum with Blue Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菊に短冊"
+          }
+        }
+      }
+    },
+    "Chrysanthemum Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菊のカス１"
+          }
+        }
+      }
+    },
+    "Chrysanthemum Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "菊のカス２"
+          }
+        }
+      }
+    },
+    "Maple and Deer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紅葉に鹿"
+          }
+        }
+      }
+    },
+    "Maple with Blue Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紅葉に短冊"
+          }
+        }
+      }
+    },
+    "Maple Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紅葉のカス１"
+          }
+        }
+      }
+    },
+    "Maple Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紅葉のカス２"
+          }
+        }
+      }
+    },
+    "Willow and Ono no Michikaze": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "柳に小野道風"
+          }
+        }
+      }
+    },
+    "Willow and Swallow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "柳に燕"
+          }
+        }
+      }
+    },
+    "Willow with Ribbon": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "柳に短冊"
+          }
+        }
+      }
+    },
+    "Willow Chaff": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "柳のカス"
+          }
+        }
+      }
+    },
+    "Paulownia and Phoenix": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桐に鳳凰"
+          }
+        }
+      }
+    },
+    "Paulownia Chaff 1": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桐のカス１"
+          }
+        }
+      }
+    },
+    "Paulownia Chaff 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桐のカス２"
+          }
+        }
+      }
+    },
+    "Paulownia Chaff 3": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桐のカス３"
+          }
+        }
+      }
+    },
+    "Koikoi": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "こいこい"
+          }
+        }
+      }
+    },
+    "Hanafuda Koi-Koi": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koikoi"
+          }
+        }
+      }
+    },
+    "Rounds": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対局数"
+          }
+        }
+      }
+    },
+    "3 Rounds": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "三月（3局）"
+          }
+        }
+      }
+    },
+    "6 Rounds": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "六月（6局）"
+          }
+        }
+      }
+    },
+    "12 Rounds": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "十二月（12局）"
+          }
+        }
+      }
+    },
+    "Difficulty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "難易度"
+          }
+        }
+      }
+    },
+    "Start Game": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対局開始"
+          }
+        }
+      }
+    },
+    "Choose a card from your hand": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手札を選んでください"
+          }
+        }
+      }
+    },
+    "Choose a field card to take (Esc to cancel)": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取る場札を選んでください（Esc で戻る）"
+          }
+        }
+      }
+    },
+    "Opponent's turn…": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相手の番…"
+          }
+        }
+      }
+    },
+    "Drawn:": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引いた札:"
+          }
+        }
+      }
+    },
+    "Yaku!": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "役が成立！"
+          }
+        }
+      }
+    },
+    "%@ (%lld pts)": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（%lld文）"
+          }
+        }
+      }
+    },
+    "Koi-Koi!": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "こいこい！"
+          }
+        }
+      }
+    },
+    "Stop": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "勝負"
+          }
+        }
+      }
+    },
+    "Next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次へ"
+          }
+        }
+      }
+    },
+    "You win the round!": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたの勝ち！"
+          }
+        }
+      }
+    },
+    "Opponent wins the round": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相手の勝ち"
+          }
+        }
+      }
+    },
+    "Draw": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "流局"
+          }
+        }
+      }
+    },
+    "%lld pts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld文"
+          }
+        }
+      }
+    },
+    "You win the match!": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対局勝利！"
+          }
+        }
+      }
+    },
+    "You lose the match…": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対局敗北…"
+          }
+        }
+      }
+    },
+    "Match drawn": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引き分け"
+          }
+        }
+      }
+    },
+    "You %lld pts – Opponent %lld pts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなた %lld文 - 相手 %lld文"
+          }
+        }
+      }
+    },
+    "Back to Title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイトルへ"
+          }
+        }
+      }
+    },
+    "One Away": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リーチ"
+          }
+        }
+      }
+    },
+    "1 more card": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あと1枚"
+          }
+        }
+      }
+    },
+    "You": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなた"
+          }
+        }
+      }
+    },
+    "Opponent": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相手"
+          }
+        }
+      }
+    },
+    "Quit Game": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対局をやめる"
+          }
+        }
+      }
+    },
+    "Quit this game?": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対局をやめますか？"
+          }
+        }
+      }
+    },
+    "The saved game will be deleted.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存された対局は削除されます。"
+          }
+        }
+      }
+    },
+    "Quit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "やめる"
+          }
+        }
+      }
+    },
+    "Continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "続ける"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

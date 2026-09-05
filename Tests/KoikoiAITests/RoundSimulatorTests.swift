@@ -68,7 +68,7 @@ import Testing
             Issue.record("expected decideKoikoi, got \(sim.phase)")
             return
         }
-        #expect(newYaku == [Yaku(.akatan, 5)])
+        #expect(newYaku == [Yaku(.redPoetryRibbons, 5)])
         #expect(sim.legalMoves() == [.koikoi, .shobu])
     }
 
@@ -86,7 +86,7 @@ import Testing
         sim.apply(.koikoi)
 
         #expect(sim.game.koikoiDeclared[.player] == true)
-        #expect(sim.game.previousYaku[.player] == [Yaku(.akatan, 5)])
+        #expect(sim.game.previousYaku[.player] == [Yaku(.redPoetryRibbons, 5)])
         #expect(sim.phase == .selectHand(.opponent))
     }
 

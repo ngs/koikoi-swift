@@ -18,12 +18,85 @@ final class KoikoiAppTests: XCTestCase {
     /// 出力: /tmp/koikoi_snapshots/*.png — 目視確認にも使う。
     @MainActor
     func testRenderGameViewSnapshot() throws {
+        try renderGameView(width: 640, height: 840, filename: "game_view.png")
+    }
+
+    /// iPad 13 インチ相当の幅で描画し、札が拡大されることを目視確認するための
+    /// スナップショット（出力: /tmp/koikoi_snapshots/game_view_ipad.png）。
+    @MainActor
+    func testRenderGameViewSnapshotIPad() throws {
+        try renderGameView(width: 1_024, height: 1_366, filename: "game_view_ipad.png")
+    }
+
+    /// 1 局対局を最後まで進め、ラウンド終了ダイアログと対局終了ダイアログを描画する。
+    /// 出力: /tmp/koikoi_snapshots/game_view_round_end.png / game_view_match_end.png
+    /// 対局終了時に onMatchEnd が呼ばれる（= 保存を捨てる）ことも併せて確認する。
+    @MainActor
+    func testRenderMatchEndSnapshot() async throws {
+        let model = GameViewModel(
+            rounds: 1, difficulty: .normal, seed: 42, aiStepDelay: .zero,
+            captureAnimationsEnabled: false)
+        var matchEnds = 0
+        model.onMatchEnd = { _ in matchEnds += 1 }
+
+        var renderedRoundEnd = false
+        var steps = 0
+        while steps < 300 {
+            steps += 1
+            // 相手の手番が終わるのを待つ
+            var waited = 0
+            while model.prompt == .opponentTurn, waited < 400 {
+                waited += 1
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            switch model.prompt {
+            case .selectHand:
+                let hand = model.game.hand(for: .player)
+                let card = try XCTUnwrap(hand.first, "empty hand")
+                model.tapHandCard(card)
+            case .selectField(let candidates):
+                model.tapFieldCard(try XCTUnwrap(candidates.first))
+            case .decideKoikoi:
+                model.decide(koikoi: false)
+            case .opponentTurn:
+                continue
+            case .roundEnd:
+                if !renderedRoundEnd {
+                    renderedRoundEnd = true
+                    try render(model: model, filename: "game_view_round_end.png")
+                }
+                XCTAssertEqual(matchEnds, 0, "onMatchEnd should not fire before the match ends")
+                model.proceedAfterRound()
+            case .matchEnd:
+                XCTAssertEqual(matchEnds, 1, "onMatchEnd should fire exactly once")
+                try render(model: model, filename: "game_view_match_end.png")
+                XCTAssertTrue(renderedRoundEnd, "round end dialog was never shown")
+                return
+            }
+        }
+        XCTFail("match did not finish: \(model.prompt)")
+    }
+
+    @MainActor
+    private func renderGameView(width: CGFloat, height: CGFloat, filename: String) throws {
         let model = GameViewModel(
             rounds: 3, difficulty: .normal, seed: 42, aiStepDelay: .seconds(60))
         // dropTargetsEnabled: ImageRenderer はドロップ受けを禁止マークの
         // プレースホルダとして描くため、スナップショットでは外す
-        let view = GameView(model: model, dropTargetsEnabled: false)
-            .frame(width: 640, height: 840)
+        try render(model: model, width: width, height: height, filename: filename)
+    }
+
+    @MainActor
+    private func render(
+        model: GameViewModel,
+        width: CGFloat = 640,
+        height: CGFloat = 840,
+        filename: String
+    ) throws {
+        // dropTargetsEnabled: ImageRenderer はドロップ受けを禁止マークの
+        // プレースホルダとして描くため、スナップショットでは外す
+        let view = GameView(model: model, dropTargetsEnabled: false, onExit: {})
+            .frame(width: width, height: height)
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
 
@@ -34,7 +107,7 @@ final class KoikoiAppTests: XCTestCase {
         let tiff = try XCTUnwrap(image.tiffRepresentation)
         let png = try XCTUnwrap(
             NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]))
-        try png.write(to: dir.appendingPathComponent("game_view.png"))
+        try png.write(to: dir.appendingPathComponent(filename))
         #else
         XCTAssertNotNil(renderer.uiImage, "GameView failed to render")
         #endif

@@ -97,14 +97,14 @@ struct CapturedDetail: View {
     }
 
     private struct Group: Identifiable {
-        let label: String
         let type: CardType
-        var id: String { label }
+        var label: String { type.localizedName }
+        var id: Int { type.rawValue }
     }
 
     private static let groups: [Group] = [
-        Group(label: "光", type: .hikari), Group(label: "タネ", type: .tane),
-        Group(label: "短冊", type: .tanzaku), Group(label: "カス", type: .kasu)
+        Group(type: .hikari), Group(type: .tane),
+        Group(type: .tanzaku), Group(type: .kasu)
     ]
 
     var body: some View {
@@ -119,7 +119,7 @@ struct CapturedDetail: View {
                             if !members.isEmpty {
                                 VStack(alignment: .leading, spacing: 1) {
                                     HStack(spacing: 4) {
-                                        Text(group.label)
+                                        Text(verbatim: group.label)
                                             .foregroundStyle(.white.opacity(0.85))
                                         Text("\(members.count)")
                                             .font(.caption2.bold().monospacedDigit())
@@ -158,7 +158,7 @@ struct ReachList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("リーチ")
+            Text("One Away", bundle: .module)
                 .font(.caption.bold())
             Rectangle()
                 .fill(.white.opacity(0.35))
@@ -166,10 +166,10 @@ struct ReachList: View {
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 5) {
                 ForEach(reaches, id: \.self) { reach in
                     GridRow {
-                        PunchedBadge(text: reach.kind.rawValue)
+                        PunchedBadge(text: reach.kind.localizedName)
                             .fixedSize()  // 「雨四光」等を折り返させない
                             .gridColumnAlignment(.trailing)
-                        Text(missingText(for: reach))
+                        Text(verbatim: missingText(for: reach))
                             .font(.caption)
                     }
                 }
@@ -186,9 +186,9 @@ struct ReachList: View {
 
     private func missingText(for reach: YakuReach) -> String {
         if let missing = reach.missing, !missing.isEmpty {
-            return missing.map(\.name).joined(separator: " / ")
+            return missing.map(\.localizedName).joined(separator: " / ")
         }
-        return "あと1枚"
+        return String(localized: "1 more card", bundle: .module)
     }
 }
 
@@ -203,7 +203,7 @@ struct ScoreboardPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 16) {
-                Text(monthName)
+                Text(verbatim: monthName)
                     .font(.system(size: 14.5, weight: .bold))  // caption の約 120%
                 Spacer(minLength: 0)
                 PunchedBadge(
@@ -214,8 +214,10 @@ struct ScoreboardPanel: View {
                 .fill(.white.opacity(0.35))
                 .frame(height: 1)
             HStack(spacing: 10) {
-                scoreTile(score: playerScore, label: "あなた")
-                scoreTile(score: opponentScore, label: "相手")
+                scoreTile(score: playerScore, label: String(localized: "You", bundle: .module))
+                scoreTile(
+                    score: opponentScore,
+                    label: String(localized: "Opponent", bundle: .module))
             }
         }
         .foregroundStyle(.white)
@@ -235,7 +237,7 @@ struct ScoreboardPanel: View {
                 verticalPadding: 4,
                 cornerRadius: 8,
                 minWidth: 56)
-            Text(label)
+            Text(verbatim: label)
                 .font(.caption2)
         }
     }
@@ -250,7 +252,7 @@ struct YakuBadges: View {
             HStack(spacing: 6) {
                 ForEach(yakus, id: \.self) { yaku in
                     HStack(spacing: 5) {
-                        Text(yaku.kind.rawValue)
+                        Text(verbatim: yaku.kind.localizedName)
                         Text("\(yaku.points)")
                             .font(.caption2.bold().monospacedDigit())
                             .padding(.horizontal, 5)
@@ -289,7 +291,7 @@ struct PulsingRing: View {
 /// 1 枚ごとに縁をずらして重ねるため、残量が高さで視覚的に分かる。
 struct DeckStack: View {
     let remaining: Int
-    private let cardWidth: CGFloat = 40
+    var cardWidth: CGFloat = 40
     /// 札の高さは縦の提案に委ねず比率から確定させる。
     /// 高さが未確定だと盤面が縦に詰まったとき aspectRatio(.fit) が 0 まで潰れ、
     /// 山札が消える（iPhone で束が表示されなかった原因）。

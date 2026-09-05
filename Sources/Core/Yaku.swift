@@ -1,20 +1,41 @@
 import Foundation
 
-/// 役の種類。表示名は go-koikoi の役名文字列と同一。
+/// 役の種類。rawValue は保存・比較用の安定した英語識別子で、
+/// 表示は `displayName`（英語）を UI 層でローカライズして使う。
+/// go-koikoi の役名は各 case のコメントに添える。
 public enum YakuKind: String, Sendable, Codable, CaseIterable, Hashable {
-    case gokou = "五光"
-    case shikou = "四光"
-    case ameShikou = "雨四光"
-    case sankou = "三光"
-    case inoshikacho = "猪鹿蝶"
-    case hanami = "花見で一杯"
-    case tsukimi = "月見で一杯"
-    case akatan = "赤短"
-    case aotan = "青短"
-    case akatanAotan = "赤短・青短の重複"
-    case tane = "タネ"
-    case tan = "タン"
-    case kasu = "カス"
+    case fiveBrights  // 五光
+    case fourBrights  // 四光
+    case rainyFourBrights  // 雨四光
+    case threeBrights  // 三光
+    case boarDeerButterfly  // 猪鹿蝶
+    case cherryBlossomViewing  // 花見で一杯
+    case moonViewing  // 月見で一杯
+    case redPoetryRibbons  // 赤短
+    case blueRibbons  // 青短
+    case redAndBlueRibbons  // 赤短・青短の重複
+    case animals  // タネ
+    case ribbons  // タン
+    case chaff  // カス
+
+    /// 英語の表示名（String Catalog のキーでもある）。
+    public var displayName: String {
+        switch self {
+        case .fiveBrights: "Five Brights"
+        case .fourBrights: "Four Brights"
+        case .rainyFourBrights: "Rainy Four Brights"
+        case .threeBrights: "Three Brights"
+        case .boarDeerButterfly: "Boar, Deer, Butterfly"
+        case .cherryBlossomViewing: "Cherry Blossom Viewing"
+        case .moonViewing: "Moon Viewing"
+        case .redPoetryRibbons: "Red Poetry Ribbons"
+        case .blueRibbons: "Blue Ribbons"
+        case .redAndBlueRibbons: "Red and Blue Ribbons"
+        case .animals: "Animals"
+        case .ribbons: "Ribbons"
+        case .chaff: "Chaff"
+        }
+    }
 }
 
 /// 成立した役。
@@ -63,29 +84,29 @@ public enum YakuChecker {
         let hasSankou = !hasGokou && !hasShikou && !hasAmeShikou && hikariNoYanagi >= 3
 
         if hasGokou {
-            yakus.append(Yaku(.gokou, 10))
+            yakus.append(Yaku(.fiveBrights, 10))
         } else if hasShikou {
-            yakus.append(Yaku(.shikou, 8))
+            yakus.append(Yaku(.fourBrights, 8))
         } else if hasAmeShikou {
-            yakus.append(Yaku(.ameShikou, 7))
+            yakus.append(Yaku(.rainyFourBrights, 7))
         } else if hasSankou {
-            yakus.append(Yaku(.sankou, 5))
+            yakus.append(Yaku(.threeBrights, 5))
         }
 
         // 猪鹿蝶: 5文 + 種札が増えるごとに +1 文
         let taneIDs = Set(tane.map(\.id))
         let hasInoshikacho = taneIDs.isSuperset(of: CardID.inoshikacho)
         if hasInoshikacho {
-            yakus.append(Yaku(.inoshikacho, 5 + (tane.count - 3)))
+            yakus.append(Yaku(.boarDeerButterfly, 5 + (tane.count - 3)))
         }
 
         // 花見で一杯 / 月見で一杯
         let allIDs = Set(captured.map(\.id))
         if allIDs.isSuperset(of: CardID.hanami) {
-            yakus.append(Yaku(.hanami, 5))
+            yakus.append(Yaku(.cherryBlossomViewing, 5))
         }
         if allIDs.isSuperset(of: CardID.tsukimi) {
-            yakus.append(Yaku(.tsukimi, 5))
+            yakus.append(Yaku(.moonViewing, 5))
         }
 
         // 短冊系（排他: 赤短・青短の重複 > 赤短/青短 > タン）
@@ -95,26 +116,26 @@ public enum YakuChecker {
 
         if hasAkatan, hasAotan {
             // 赤短・青短の重複: 10 文 + 短冊が増えるごとに +1 文
-            yakus.append(Yaku(.akatanAotan, 10 + max(tanzaku.count - 6, 0)))
+            yakus.append(Yaku(.redAndBlueRibbons, 10 + max(tanzaku.count - 6, 0)))
         } else if hasAkatan {
-            yakus.append(Yaku(.akatan, 5 + max(tanzaku.count - 3, 0)))
+            yakus.append(Yaku(.redPoetryRibbons, 5 + max(tanzaku.count - 3, 0)))
         } else if hasAotan {
-            yakus.append(Yaku(.aotan, 5 + max(tanzaku.count - 3, 0)))
+            yakus.append(Yaku(.blueRibbons, 5 + max(tanzaku.count - 3, 0)))
         }
 
         // タネ: 種札 5 枚以上で 1 文 + 1 枚ごとに +1 文（猪鹿蝶ができたら無効）
         if !hasInoshikacho, tane.count >= 5 {
-            yakus.append(Yaku(.tane, 1 + (tane.count - 5)))
+            yakus.append(Yaku(.animals, 1 + (tane.count - 5)))
         }
 
         // タン: 短冊札 5 枚以上で 1 文 + 1 枚ごとに +1 文（赤短か青短ができたら無効）
         if !hasAkatan, !hasAotan, tanzaku.count >= 5 {
-            yakus.append(Yaku(.tan, 1 + (tanzaku.count - 5)))
+            yakus.append(Yaku(.ribbons, 1 + (tanzaku.count - 5)))
         }
 
         // カス: カス札 10 枚以上で 1 文 + 1 枚ごとに +1 文
         if kasu.count >= 10 {
-            yakus.append(Yaku(.kasu, 1 + (kasu.count - 10)))
+            yakus.append(Yaku(.chaff, 1 + (kasu.count - 10)))
         }
 
         return yakus
@@ -175,41 +196,41 @@ public enum YakuChecker {
         let hasYanagi = context.hikariIDs.contains(CardID.yanagiHikari)
 
         // 五光リーチ（光札 4 枚）
-        if !context.hasYaku(.gokou), context.hikari.count == 4 {
+        if !context.hasYaku(.fiveBrights), context.hikari.count == 4 {
             let missing = context.missingCards(required: CardID.allHikari, have: context.hikariIDs)
             if missing.count == 1 {
-                reaches.append(YakuReach(.gokou, missing))
+                reaches.append(YakuReach(.fiveBrights, missing))
             }
         }
 
         // 四光リーチ（柳以外の光 3 枚・柳なし）
-        if !context.hasYaku(.shikou), !context.hasYaku(.gokou), hikariNoYanagi == 3, !hasYanagi {
+        if !context.hasYaku(.fourBrights), !context.hasYaku(.fiveBrights), hikariNoYanagi == 3, !hasYanagi {
             let missing = context.missingCards(
                 required: CardID.noYanagiHikari, have: context.hikariIDs)
             if missing.count == 1 {
-                reaches.append(YakuReach(.shikou, missing))
+                reaches.append(YakuReach(.fourBrights, missing))
             }
         }
 
         // 雨四光リーチ
-        if !context.hasYaku(.ameShikou), !context.hasYaku(.shikou), !context.hasYaku(.gokou) {
+        if !context.hasYaku(.rainyFourBrights), !context.hasYaku(.fourBrights), !context.hasYaku(.fiveBrights) {
             if hasYanagi, hikariNoYanagi == 2 {
                 // 柳あり + 柳以外 2 枚 → 柳以外の光あと 1 枚
                 let missing = context.missingCards(
                     required: CardID.noYanagiHikari, have: context.hikariIDs)
-                reaches.append(YakuReach(.ameShikou, missing))
+                reaches.append(YakuReach(.rainyFourBrights, missing))
             } else if !hasYanagi, hikariNoYanagi == 3 {
                 // 三光成立中 → 柳を取れば雨四光
-                reaches.append(YakuReach(.ameShikou, [Card.all[CardID.yanagiHikari]]))
+                reaches.append(YakuReach(.rainyFourBrights, [Card.all[CardID.yanagiHikari]]))
             }
         }
 
         // 三光リーチ（柳以外の光 2 枚・柳なし）
-        if !context.hasYaku(.sankou), !context.hasYaku(.ameShikou), !context.hasYaku(.shikou),
-            !context.hasYaku(.gokou), hikariNoYanagi == 2, !hasYanagi {
+        if !context.hasYaku(.threeBrights), !context.hasYaku(.rainyFourBrights), !context.hasYaku(.fourBrights),
+            !context.hasYaku(.fiveBrights), hikariNoYanagi == 2, !hasYanagi {
             let missing = context.missingCards(
                 required: CardID.noYanagiHikari, have: context.hikariIDs)
-            reaches.append(YakuReach(.sankou, missing))
+            reaches.append(YakuReach(.threeBrights, missing))
         }
 
         return reaches
@@ -220,17 +241,17 @@ public enum YakuChecker {
         var reaches: [YakuReach] = []
 
         // 猪鹿蝶（3 枚中 2 枚保持・残り 1 枚が相手に取られていない）
-        if !context.hasYaku(.inoshikacho),
+        if !context.hasYaku(.boarDeerButterfly),
             CardID.inoshikacho.filter(context.taneIDs.contains).count == 2 {
             let missing = context.missingCards(
                 required: CardID.inoshikacho, have: context.taneIDs)
             if missing.count == 1 {
-                reaches.append(YakuReach(.inoshikacho, missing))
+                reaches.append(YakuReach(.boarDeerButterfly, missing))
             }
         }
 
         // 花見で一杯 / 月見で一杯（2 枚中 1 枚保持・残りが相手に取られていない）
-        for (kind, required) in [(YakuKind.hanami, CardID.hanami), (.tsukimi, CardID.tsukimi)] {
+        for (kind, required) in [(YakuKind.cherryBlossomViewing, CardID.hanami), (.moonViewing, CardID.tsukimi)] {
             if !context.hasYaku(kind), required.filter(context.allIDs.contains).count == 1 {
                 let missing = context.missingCards(required: required, have: context.allIDs)
                 if missing.count == 1 {
@@ -244,10 +265,10 @@ public enum YakuChecker {
 
     /// 短冊系（赤短・青短・重複）のリーチ。
     private static func tanzakuReaches(_ context: ReachContext) -> [YakuReach] {
-        guard !context.hasYaku(.akatanAotan) else { return [] }
+        guard !context.hasYaku(.redAndBlueRibbons) else { return [] }
 
-        let akatanDone = context.hasYaku(.akatan)
-        let aotanDone = context.hasYaku(.aotan)
+        let akatanDone = context.hasYaku(.redPoetryRibbons)
+        let aotanDone = context.hasYaku(.blueRibbons)
         let akatanMissing = context.missingCards(required: CardID.akatan, have: context.tanzakuIDs)
         let aotanMissing = context.missingCards(required: CardID.aotan, have: context.tanzakuIDs)
         // リーチ条件: 3 枚中 2 枚を自分が持っていて、もう 1 枚が相手に取られていない
@@ -257,18 +278,18 @@ public enum YakuChecker {
             && CardID.aotan.filter(context.tanzakuIDs.contains).count == 2
 
         if akatanDone, aotanReach {
-            return [YakuReach(.akatanAotan, aotanMissing)]
+            return [YakuReach(.redAndBlueRibbons, aotanMissing)]
         }
         if aotanDone, akatanReach {
-            return [YakuReach(.akatanAotan, akatanMissing)]
+            return [YakuReach(.redAndBlueRibbons, akatanMissing)]
         }
 
         var reaches: [YakuReach] = []
         if !akatanDone, akatanReach {
-            reaches.append(YakuReach(.akatan, akatanMissing))
+            reaches.append(YakuReach(.redPoetryRibbons, akatanMissing))
         }
         if !aotanDone, aotanReach {
-            reaches.append(YakuReach(.aotan, aotanMissing))
+            reaches.append(YakuReach(.blueRibbons, aotanMissing))
         }
         return reaches
     }
@@ -276,20 +297,20 @@ public enum YakuChecker {
     /// 枚数役（タネ・タン・カス）のリーチ。
     private static func countReaches(_ context: ReachContext) -> [YakuReach] {
         var reaches: [YakuReach] = []
-        let akatanDone = context.hasYaku(.akatan) || context.hasYaku(.akatanAotan)
-        let aotanDone = context.hasYaku(.aotan) || context.hasYaku(.akatanAotan)
+        let akatanDone = context.hasYaku(.redPoetryRibbons) || context.hasYaku(.redAndBlueRibbons)
+        let aotanDone = context.hasYaku(.blueRibbons) || context.hasYaku(.redAndBlueRibbons)
 
         // タネ（5 枚・猪鹿蝶未成立時のみ）
-        if !context.hasYaku(.tane), !context.hasYaku(.inoshikacho), context.tane.count == 4 {
-            reaches.append(YakuReach(.tane, nil))
+        if !context.hasYaku(.animals), !context.hasYaku(.boarDeerButterfly), context.tane.count == 4 {
+            reaches.append(YakuReach(.animals, nil))
         }
         // タン（5 枚・赤短/青短未成立時のみ）
-        if !context.hasYaku(.tan), !akatanDone, !aotanDone, context.tanzaku.count == 4 {
-            reaches.append(YakuReach(.tan, nil))
+        if !context.hasYaku(.ribbons), !akatanDone, !aotanDone, context.tanzaku.count == 4 {
+            reaches.append(YakuReach(.ribbons, nil))
         }
         // カス（10 枚）
-        if !context.hasYaku(.kasu), context.kasu.count == 9 {
-            reaches.append(YakuReach(.kasu, nil))
+        if !context.hasYaku(.chaff), context.kasu.count == 9 {
+            reaches.append(YakuReach(.chaff, nil))
         }
         return reaches
     }

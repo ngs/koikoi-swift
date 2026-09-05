@@ -14,6 +14,9 @@ public struct GameSessionView: View {
     @Environment(\.scenePhase)
     private var scenePhase
 
+    /// デバッグ用の対局数上書きキー（起動引数 `-KoikoiDebugRounds <n>`）。
+    static let debugRoundsKey = "KoikoiDebugRounds"
+
     public init(store: GameStore = .shared) {
         self.store = store
     }
@@ -23,14 +26,16 @@ public struct GameSessionView: View {
             content
                 .toolbar { quitToolbar }
                 .confirmationDialog(
-                    "対局をやめますか？",
+                    Text("Quit this game?", bundle: .module),
                     isPresented: $confirmingQuit,
                     titleVisibility: .visible
                 ) {
-                    Button("やめる", role: .destructive) { quit() }
-                    Button("続ける", role: .cancel) {}
+                    Button(String(localized: "Quit", bundle: .module), role: .destructive) {
+                        quit()
+                    }
+                    Button(String(localized: "Continue", bundle: .module), role: .cancel) {}
                 } message: {
-                    Text("保存された対局は削除されます。")
+                    Text("The saved game will be deleted.", bundle: .module)
                 }
         }
         .onAppear {
@@ -54,7 +59,7 @@ public struct GameSessionView: View {
         } else {
             GameSetupView { rounds, difficulty in
                 let record = GameRecord(
-                    rounds: rounds,
+                    rounds: Self.resolvedRounds(rounds),
                     difficulty: difficulty,
                     seed: UInt64.random(in: .min ... .max))
                 store.save(record)
@@ -66,7 +71,10 @@ public struct GameSessionView: View {
     @ToolbarContentBuilder private var quitToolbar: some ToolbarContent {
         if model != nil {
             ToolbarItem(placement: Self.quitPlacement) {
-                Button("対局をやめる", systemImage: "xmark") {
+                Button(
+                    String(localized: "Quit Game", bundle: .module),
+                    systemImage: "xmark"
+                ) {
                     confirmingQuit = true
                 }
             }
@@ -81,6 +89,18 @@ public struct GameSessionView: View {
         #endif
     }
 
+    /// デバッグ時のみ、起動引数 `-KoikoiDebugRounds <n>` で対局数を上書きする
+    /// （終了フローの動作確認用。Release ビルドには含めない）。
+    static func resolvedRounds(
+        _ rounds: Int, defaults: UserDefaults = .standard
+    ) -> Int {
+        #if DEBUG
+        let override = defaults.integer(forKey: Self.debugRoundsKey)
+        if override >= 1 { return override }
+        #endif
+        return rounds
+    }
+
     private func start(record: GameRecord) {
         self.record = record
         let model = GameViewModel(record: record)
@@ -88,6 +108,11 @@ public struct GameSessionView: View {
             self.record?.moves.append(move)
             guard let updated = self.record else { return }
             store.save(updated)
+        }
+        // 対局が終わった時点で保存を捨てる（結果表示中に kill されても復元しない）
+        model.onMatchEnd = { _ in
+            store.clear()
+            self.record = nil
         }
         self.model = model
     }

@@ -14,24 +14,29 @@ public struct GameSetupView: View {
     public var body: some View {
         VStack(spacing: 24) {
             VStack(spacing: 4) {
-                Text("こいこい")
+                // 上段はアプリ名、下段は副題（言語ごとに自然な並びになるよう別キーにする）
+                Text("Koikoi", bundle: .module)
                     .font(.system(size: 56, weight: .bold))
-                Text("Koikoi")
+                Text("Hanafuda Koi-Koi", bundle: .module)
                     .foregroundStyle(.secondary)
             }
 
             VStack(spacing: 12) {
-                Picker("対局数", selection: $rounds) {
-                    Text("三月（3局）").tag(3)
-                    Text("六月（6局）").tag(6)
-                    Text("十二月（12局）").tag(12)
+                Picker(selection: $rounds) {
+                    Text("3 Rounds", bundle: .module).tag(3)
+                    Text("6 Rounds", bundle: .module).tag(6)
+                    Text("12 Rounds", bundle: .module).tag(12)
+                } label: {
+                    Text("Rounds", bundle: .module)
                 }
                 .pickerStyle(.segmented)
 
-                Picker("難易度", selection: $difficulty) {
+                Picker(selection: $difficulty) {
                     ForEach(Difficulty.allCases, id: \.self) { level in
-                        Text(level.label).tag(level)
+                        Text(verbatim: level.localizedLabel).tag(level)
                     }
+                } label: {
+                    Text("Difficulty", bundle: .module)
                 }
                 .pickerStyle(.segmented)
             }
@@ -40,7 +45,7 @@ public struct GameSetupView: View {
             Button {
                 onStart(rounds, difficulty)
             } label: {
-                Text("対局開始")
+                Text("Start Game", bundle: .module)
                     .font(.title3.bold())
                     .padding(.horizontal, 32)
                     .padding(.vertical, 8)
@@ -51,6 +56,6 @@ public struct GameSetupView: View {
     }
 }
 
-#Preview("対局設定") {
+#Preview("Game Setup") {
     GameSetupView { _, _ in }
 }

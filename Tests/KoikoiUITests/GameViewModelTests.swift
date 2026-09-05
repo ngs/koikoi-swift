@@ -171,6 +171,59 @@ import Testing
 }
 
 extension GameViewModelTests {
+    /// 1 局対局を最後まで進めると matchEnd に入り、onMatchEnd が一度だけ呼ばれる。
+    @Test func matchEndFiresOnceAfterFinalRound() async {
+        var model: GameViewModel?
+        for seed: UInt64 in 1...16 where GameViewModel.isPlayerParent(seed: seed, rounds: 1) {
+            model = makeModel(seed: seed)
+            break
+        }
+        guard let model else {
+            Issue.record("no player-parent seed found")
+            return
+        }
+
+        var endedWith: [Seat?] = []
+        model.onMatchEnd = { endedWith.append($0) }
+
+        var guardCount = 0
+        while guardCount < 200 {
+            guardCount += 1
+            await waitForPlayerPrompt(model)
+            switch model.prompt {
+            case .selectHand:
+                guard let card = model.game.hand(for: .player).first else {
+                    Issue.record("empty hand at selectHand")
+                    return
+                }
+                model.tapHandCard(card)
+            case .selectField(let candidates):
+                guard let choice = candidates.first else {
+                    Issue.record("no field candidates")
+                    return
+                }
+                model.tapFieldCard(choice)
+            case .decideKoikoi:
+                model.decide(koikoi: false)
+            case .opponentTurn:
+                continue
+            case .roundEnd:
+                // 最終ラウンドなので「次へ」で対局終了へ入る
+                #expect(endedWith.isEmpty)
+                model.proceedAfterRound()
+            case .matchEnd(let winner):
+                #expect(endedWith.count == 1, "onMatchEnd should fire exactly once")
+                #expect(endedWith.first == winner)
+                // 終了後に再度呼んでも状態は変わらない
+                model.proceedAfterRound()
+                #expect(model.prompt == .matchEnd(winner: winner))
+                #expect(endedWith.count == 1)
+                return
+            }
+        }
+        Issue.record("match did not finish: \(model.prompt)")
+    }
+
     /// 記録（onMoveApplied）→ JSON 往復 → リプレイで同一盤面が復元される。
     @Test func recordAndReplayRoundTrip() async throws {
         let model = makeModel(seed: 5)

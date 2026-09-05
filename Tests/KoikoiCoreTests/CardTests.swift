@@ -4,20 +4,35 @@ import Testing
 
 @Suite struct CardTests {
     @Test func monthFlowerNames() {
-        let expected = ["松", "梅", "桜", "藤", "菖蒲", "牡丹", "萩", "芒", "菊", "紅葉", "柳", "桐"]
+        let expected = [
+            "Pine", "Plum", "Cherry Blossom", "Wisteria", "Iris", "Peony",
+            "Bush Clover", "Pampas Grass", "Chrysanthemum", "Maple", "Willow", "Paulownia"
+        ]
         for (month, name) in zip(Month.allCases, expected) {
             #expect(month.flowerName == name)
         }
     }
 
-    @Test func monthOldNames() {
+    @Test func monthNames() {
         let expected = [
-            "睦月", "如月", "弥生", "卯月", "皐月", "水無月",
-            "文月", "葉月", "長月", "神無月", "霜月", "師走"
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
         ]
         for (month, name) in zip(Month.allCases, expected) {
-            #expect(month.oldName == name)
+            #expect(month.monthName == name)
         }
+    }
+
+    @Test func cardTypeNames() {
+        #expect(CardType.hikari.name == "Brights")
+        #expect(CardType.tanzaku.name == "Ribbons")
+        #expect(CardType.tane.name == "Animals")
+        #expect(CardType.kasu.name == "Chaff")
+    }
+
+    /// 48 枚の英語名が重複しない（String Catalog のキーになるため）。
+    @Test func cardNamesAreUnique() {
+        #expect(Set(Card.all.map(\.name)).count == 48)
     }
 
     @Test func allCardsCount() {
@@ -45,15 +60,15 @@ import Testing
     }
 
     @Test func cardDisplay() {
-        #expect(Card.all[0].name == "松に鶴")
-        #expect(Card.all[0].display == "[松:光]")
-        #expect(Card.all[28].display == "[芒:光]")
-        #expect(Card.all[43].display == "[柳:カ]")
+        #expect(Card.all[0].name == "Pine and Crane")
+        #expect(Card.all[0].display == "[Pine:Brights]")
+        #expect(Card.all[28].display == "[Pampas Grass:Brights]")
+        #expect(Card.all[43].display == "[Willow:Chaff]")
     }
 
     @Test func cardByID() {
-        #expect(Card.card(id: 0)?.name == "松に鶴")
-        #expect(Card.card(id: 47)?.name == "桐のカス３")
+        #expect(Card.card(id: 0)?.name == "Pine and Crane")
+        #expect(Card.card(id: 47)?.name == "Paulownia Chaff 3")
         #expect(Card.card(id: 48) == nil)
         #expect(Card.card(id: -1) == nil)
     }

@@ -44,11 +44,11 @@ public struct CardImage: View {
             .resizable()
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
-            .accessibilityLabel(Text(card.name))
+            .accessibilityLabel(Text(verbatim: card.localizedName))
     }
 }
 
-#Preview("札一覧") {
+#Preview("All Cards") {
     ScrollView {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 12) {
             ForEach(Card.all) { card in

@@ -32,9 +32,10 @@ public enum PersonaEvent: Sendable, Hashable {
 public actor OpponentPersona {
     /// 既定の人格設定。
     public static let defaultCharacter = """
-        あなたは花札こいこいの対戦相手「こい」。粋でいなせな江戸言葉の \
-        キャラクター。勝っても負けても飄々としていて、札や季節の風情に \
-        さらりと触れる。
+        You are Koi, the opponent in a game of hanafuda koi-koi: a witty, \
+        rakish character who speaks like an old Edo townsman. Unruffled \
+        whether winning or losing, and given to light remarks about the \
+        cards and the season.
         """
 
     private let instructions: String
@@ -42,13 +43,27 @@ public actor OpponentPersona {
     private var session: LanguageModelSession?
     #endif
 
-    public init(character: String = OpponentPersona.defaultCharacter) {
+    /// - Parameters:
+    ///   - character: 人格の設定文。
+    ///   - language: 台詞を返させる言語（既定は現在のロケール。
+    ///     プロンプト自体は英語のまま、応答の言語だけを指定する）。
+    public init(
+        character: String = OpponentPersona.defaultCharacter,
+        language: Locale.Language = Locale.current.language
+    ) {
         instructions = """
             \(character)
 
-            出力は台詞 1 文のみ（最大 30 文字程度）。説明・引用符・絵文字は \
-            付けない。日本語で答える。
+            Reply with a single line of dialogue in \
+            \(Self.languageName(of: language)), about 30 characters or fewer. \
+            No explanation, quotation marks, or emoji.
             """
+    }
+
+    /// 言語コードを英語の言語名にする（プロンプトに埋める用）。
+    static func languageName(of language: Locale.Language) -> String {
+        let code = language.languageCode?.identifier ?? "en"
+        return Locale(identifier: "en_US").localizedString(forLanguageCode: code) ?? "English"
     }
 
     /// オンデバイスモデルが利用可能か。
@@ -73,10 +88,10 @@ public actor OpponentPersona {
         newYaku: [Yaku], declaredKoikoi: Bool, handCount: Int
     ) async -> String? {
         let names = Self.yakuSummary(newYaku)
-        let decision = declaredKoikoi ? "こいこいを選んだ" : "勝負を選んだ"
+        let decision = declaredKoikoi ? "called koi-koi" : "chose to stop"
         return await respond(to: """
-            \(names)が成立し、残り手札 \(handCount) 枚で\(decision)。 \
-            その心意気をキャラクターとして一言で。
+            You made \(names) and, with \(handCount) cards left in hand, \
+            \(decision). Say a word in character about that choice.
             """)
     }
 
@@ -121,38 +136,39 @@ public actor OpponentPersona {
     static func prompt(for event: PersonaEvent) -> String {
         switch event {
         case .gameStart:
-            return "対局開始。最初のあいさつを一言で。"
+            return "The match begins. Give an opening greeting in one line."
         case .roundStart(let round):
-            return "第 \(round) ラウンド開始。意気込みを一言で。"
+            return "Round \(round) begins. Say a word about your resolve."
         case .selfYaku(let yakus):
-            return "自分に\(yakuSummary(yakus))が成立した。喜びを一言で。"
+            return "You made \(yakuSummary(yakus)). Say a word of delight."
         case let .selfKoikoi(newYaku, handCount):
-            return "自分に\(yakuSummary(newYaku))が成立したが、残り手札 \(handCount) 枚で" +
-                "こいこいを宣言した。強気の一言を。"
+            return "You made \(yakuSummary(newYaku)) but called koi-koi with " +
+                "\(handCount) cards left in hand. Say something bold."
         case .selfShobu(let points):
-            return "勝負して \(points) 文で上がった。決め台詞を一言で。"
+            return "You stopped and took the round for \(points) points. Say your catchphrase."
         case .playerYaku(let yakus):
-            return "相手（プレイヤー）に\(yakuSummary(yakus))が成立した。悔しさを一言で。"
+            return "Your opponent made \(yakuSummary(yakus)). Say a word of frustration."
         case .playerKoikoi:
-            return "相手（プレイヤー）がこいこいを宣言した。挑発を受けた一言を。"
+            return "Your opponent called koi-koi. Answer the provocation in one line."
         case .playerShobu(let points):
-            return "相手（プレイヤー）が \(points) 文で上がった。負け惜しみを一言で。"
+            return "Your opponent took the round for \(points) points. Be a sore loser in one line."
         case .roundDrawn:
-            return "流局した。ひとこと感想を。"
+            return "The round was a draw. Give a brief remark."
         case .gameEnd(let selfWon):
             switch selfWon {
-            case .some(true): return "対局に勝った。締めのあいさつを一言で。"
-            case .some(false): return "対局に負けた。潔い締めのあいさつを一言で。"
-            case .none: return "対局は引き分けだった。締めのあいさつを一言で。"
+            case .some(true): return "You won the match. Give a closing greeting in one line."
+            case .some(false):
+                return "You lost the match. Give a gracious closing greeting in one line."
+            case .none: return "The match was drawn. Give a closing greeting in one line."
             }
         }
     }
 
-    /// 役リストを「五光(10文)・赤短(5文)」形式に要約する。
+    /// 役リストを「Five Brights (10 pts) · Red Poetry Ribbons (5 pts)」形式に要約する。
     static func yakuSummary(_ yakus: [Yaku]) -> String {
-        guard !yakus.isEmpty else { return "役" }
+        guard !yakus.isEmpty else { return "a yaku" }
         return yakus
-            .map { "\($0.kind.rawValue)(\($0.points)文)" }
-            .joined(separator: "・")
+            .map { "\($0.kind.displayName) (\($0.points) pts)" }
+            .joined(separator: " · ")
     }
 }

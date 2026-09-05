@@ -81,7 +81,7 @@ struct SpatialBoardView: View {
                     rounds: rounds, difficulty: difficulty,
                     seed: UInt64.random(in: .min ... .max)))
             }
-            Button("保存した対局を開く", systemImage: "folder") {
+            Button(String(localized: "Open Saved Game"), systemImage: "folder") {
                 importing = true
             }
         }
@@ -100,6 +100,10 @@ struct SpatialBoardView: View {
                 GameRecord(
                     rounds: record.rounds, difficulty: record.difficulty,
                     seed: record.seed, moves: moves))
+        }
+        // 対局が終わった時点で保存を捨てる（結果表示中に kill されても復元しない）
+        model.onMatchEnd = { _ in
+            store.clear()
         }
         self.model = model
     }
@@ -579,12 +583,14 @@ private struct SpatialControlPanel: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text(scoreLine)
+            Text(verbatim: scoreLine)
                 .font(.headline)
             promptView
             HStack(spacing: 20) {
-                Button("保存", systemImage: "square.and.arrow.down", action: onSave)
-                Button("タイトルへ", systemImage: "house", action: onQuit)
+                Button(
+                    String(localized: "Save"), systemImage: "square.and.arrow.down",
+                    action: onSave)
+                Button(String(localized: "Back to Title"), systemImage: "house", action: onQuit)
             }
             .buttonStyle(.borderless)
             .font(.caption)
@@ -595,36 +601,50 @@ private struct SpatialControlPanel: View {
     }
 
     private var scoreLine: String {
-        let month = Month(rawValue: (model.game.round - 1) % 12)?.oldName ?? ""
-        return "\(month) \(model.game.round)/\(model.game.maxRounds) ・ "
-            + "あなた \(model.game.score(for: .player)) - 相手 \(model.game.score(for: .opponent))"
+        let month = Month(rawValue: (model.game.round - 1) % 12)?.localizedMonthName ?? ""
+        let round = model.game.round
+        let maxRounds = model.game.maxRounds
+        let player = model.game.score(for: .player)
+        let opponent = model.game.score(for: .opponent)
+        return String(
+            localized: "\(month) \(round)/\(maxRounds) · You \(player) – Opponent \(opponent)")
     }
 
     @ViewBuilder private var promptView: some View {
         switch model.prompt {
         case .selectHand:
-            Text("手札を選んでください")
+            Text("Choose a card from your hand")
         case .selectField:
-            Text("取る場札を選んでください")
+            Text("Choose a field card to take")
         case .opponentTurn:
-            Text("相手の番…")
+            Text("Opponent's turn…")
         case .decideKoikoi(let newYaku):
-            Text(newYaku.map { "\($0.kind.rawValue) \($0.points)文" }.joined(separator: "・"))
+            Text(verbatim: newYaku.map(\.localizedSummary).joined(separator: " · "))
             HStack {
-                Button("こいこい！") { model.decide(koikoi: true) }
+                Button(String(localized: "Koi-Koi!")) { model.decide(koikoi: true) }
                     .buttonStyle(.borderedProminent)
-                Button("勝負") { model.decide(koikoi: false) }
+                Button(String(localized: "Stop")) { model.decide(koikoi: false) }
             }
         case .roundEnd(let outcome):
-            Text(outcome.winner == .player ? "あなたの勝ち！ \(outcome.points)文" :
-                outcome.winner == .opponent ? "相手の勝ち \(outcome.points)文" : "流局")
-            Button("次へ") { model.proceedAfterRound() }
+            Text(verbatim: roundEndLine(outcome))
+            Button(String(localized: "Next")) { model.proceedAfterRound() }
                 .buttonStyle(.borderedProminent)
         case .matchEnd(let winner):
-            Text(winner == .player ? "対局勝利！" : winner == .opponent ? "対局敗北…" : "引き分け")
-            Button("タイトルへ戻る", action: onQuit)
+            Text(verbatim: KoikoiText.matchEndTitle(winner: winner))
+            Text(
+                verbatim: KoikoiText.finalScore(
+                    player: model.game.score(for: .player),
+                    opponent: model.game.score(for: .opponent)))
+            Button(String(localized: "Back to Title"), action: onQuit)
                 .buttonStyle(.borderedProminent)
         }
+    }
+
+    /// 「You win the round! 5 pts」形式（流局は点数なし）。
+    private func roundEndLine(_ outcome: RoundOutcome) -> String {
+        let title = KoikoiText.roundEndTitle(winner: outcome.winner)
+        guard outcome.winner != nil else { return title }
+        return "\(title) \(KoikoiText.points(outcome.points))"
     }
 }
 #endif

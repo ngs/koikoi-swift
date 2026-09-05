@@ -9,12 +9,13 @@ public enum Difficulty: String, Sendable, Codable, CaseIterable {
     /// ISMCTS 探索（KoikoiAI モジュールが実装）。
     case search
 
+    /// 難易度の表示名（英語。日本語訳は かんたん・ふつう・つよい・たつじん）。
     public var label: String {
         switch self {
-        case .easy: "かんたん"
-        case .normal: "ふつう"
-        case .hard: "つよい"
-        case .search: "たつじん"
+        case .easy: "Easy"
+        case .normal: "Normal"
+        case .hard: "Hard"
+        case .search: "Expert"
         }
     }
 }

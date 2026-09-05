@@ -222,14 +222,14 @@ import Testing
         var game = Game(rounds: 12, rng: GameRandom(seed: 19))
         game.captured[.player] = cards(0, 8, 28)  // 三光
         let newYaku = game.checkNewYaku(for: .player)
-        #expect(newYaku.contains(Yaku(.sankou, 5)))
+        #expect(newYaku.contains(Yaku(.threeBrights, 5)))
     }
 
     @Test func checkNewYakuOpponent() {
         var game = Game(rounds: 12, rng: GameRandom(seed: 20))
         game.captured[.opponent] = cards(1, 5, 9)  // 赤短
         let newYaku = game.checkNewYaku(for: .opponent)
-        #expect(newYaku.contains(Yaku(.akatan, 5)))
+        #expect(newYaku.contains(Yaku(.redPoetryRibbons, 5)))
     }
 
     /// 前回チェック済みの役は「新しい役」に含めない。
@@ -247,14 +247,14 @@ import Testing
         game.updatePreviousYaku(for: .player)
         game.captured[.player] = cards(1, 5, 9, 13)  // 赤短 6文
         let newYaku = game.checkNewYaku(for: .player)
-        #expect(newYaku.contains(Yaku(.akatan, 6)))
+        #expect(newYaku.contains(Yaku(.redPoetryRibbons, 6)))
     }
 
     @Test func updatePreviousYaku() {
         var game = Game(rounds: 12, rng: GameRandom(seed: 23))
         game.captured[.player] = cards(0, 8, 28)
         game.updatePreviousYaku(for: .player)
-        #expect(game.previousYaku[.player] == [Yaku(.sankou, 5)])
+        #expect(game.previousYaku[.player] == [Yaku(.threeBrights, 5)])
     }
 
     // MARK: - 得点計算

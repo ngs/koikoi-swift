@@ -49,6 +49,7 @@ let package = Package(
                 .target(name: "KoikoiAI"),
             ],
             path: "Sources/UI",
+            resources: [.process("Resources")],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
                 .swiftLanguageMode(.v6),
