@@ -20,6 +20,17 @@ import Testing
         #expect(GameView.tileWidth(forBoardWidth: 1_366) == GameView.maxCardTileWidth)
     }
 
+    /// compact 幅（iPhone 縦）では 8 枚 + 7 スペーシング + 左右パディングが 1 行に収まるよう縮む。
+    @Test func compactBoardShrinksTilesToFitOneRow() {
+        for width: CGFloat in [375, 393, 430] {
+            let tile = GameView.tileWidth(forBoardWidth: width, compact: true)
+            #expect(tile >= GameView.minCompactTileWidth)
+            #expect(tile < GameView.cardTileWidth)
+            #expect(GameView.boardWidth(forTile: tile, compact: true) <= width + 0.5)
+        }
+        #expect(GameView.tileWidth(forBoardWidth: 0, compact: true) == GameView.minCompactTileWidth)
+    }
+
     /// 中間の幅では 8 枚 + 7 スペーシング + 左右パディングが 1 行に収まる。
     @Test func intermediateBoardFitsEightCardsInOneRow() {
         let width: CGFloat = 800

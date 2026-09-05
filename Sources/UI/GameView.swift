@@ -32,12 +32,24 @@ public struct GameView: View {
         #endif
     }
 
+    /// compact 幅（iPhone 縦）での札タイル幅の下限。
+    static let minCompactTileWidth: CGFloat = 40
+
+    /// グリッドのスペーシング（compact 幅では詰めて 8 枚を 1 行に収める）。
+    static func gridSpacing(compact: Bool) -> CGFloat {
+        compact ? 4 : 8
+    }
+
     /// 盤面幅から札タイル幅を決める。
-    /// 手札/場札 8 枚 + 7 スペーシングが 1 行に収まる最大幅を取り、64…112pt に丸める
-    /// （iPhone は常に下限 64 になり、従来どおりグリッドが折り返す）。
-    static func tileWidth(forBoardWidth width: CGFloat) -> CGFloat {
-        guard width > 0 else { return cardTileWidth }
-        let available = width - boardPadding * 2 - 8 * 7
+    /// 手札/場札 8 枚 + 7 スペーシングが 1 行に収まる最大幅を取り、64…112pt に丸める。
+    /// compact 幅（iPhone 縦）では折り返すと縦が足りないため、
+    /// 8 枚が 1 行に収まるよう 64pt 未満（下限 40pt）まで縮める。
+    static func tileWidth(forBoardWidth width: CGFloat, compact: Bool = false) -> CGFloat {
+        guard width > 0 else { return compact ? minCompactTileWidth : cardTileWidth }
+        let available = width - boardPadding * 2 - gridSpacing(compact: compact) * 7
+        if compact {
+            return min(max(floor(available / 8), minCompactTileWidth), cardTileWidth)
+        }
         return min(max(available / 8, cardTileWidth), maxCardTileWidth)
     }
 
@@ -68,19 +80,16 @@ public struct GameView: View {
     public var body: some View {
         // 盤面幅から札の大きさを決める（iPad 13 インチや広い macOS ウィンドウで拡大する）
         GeometryReader { proxy in
-            board(tile: Self.tileWidth(forBoardWidth: proxy.size.width))
+            board(tile: Self.tileWidth(forBoardWidth: proxy.size.width, compact: isCompactWidth))
         }
         // 場札・手札 8 枚が 1 行に収まる最小幅（ウィンドウをリサイズできる macOS のみ。
         // iPhone では画面幅を超えて盤面がはみ出すため、グリッドの折り返しに任せる）
         .frame(minWidth: Self.macMinBoardWidth)
         .overlay(alignment: .topTrailing) {
-            ScoreboardPanel(
-                monthName: Month(rawValue: (model.game.round - 1) % 12)?.localizedMonthName ?? "",
-                round: model.game.round,
-                maxRounds: model.game.maxRounds,
-                playerScore: model.game.score(for: .player),
-                opponentScore: model.game.score(for: .opponent))
-            .padding(Self.boardPadding)
+            // 幅が狭いときは相手陣の行に組み込む（獲得札の上に被せない）
+            if !isCompactWidth {
+                scoreboard.padding(Self.boardPadding)
+            }
         }
         .overlay { overlays }
         .animation(.default, value: model.game.field)
@@ -120,6 +129,8 @@ public struct GameView: View {
                 playerArea(tile: tile).layoutPriority(1)
             }
             .padding(Self.boardPadding)
+            // 札が上限サイズに達した後は盤面を広げず中央に寄せる
+            .frame(maxWidth: Self.boardWidth(forTile: tile, compact: isCompactWidth))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -148,27 +159,53 @@ public struct GameView: View {
 
     // MARK: - 区画
 
+    private var scoreboard: some View {
+        ScoreboardPanel(
+            monthName: Month(rawValue: (model.game.round - 1) % 12)?.localizedMonthName ?? "",
+            round: model.game.round,
+            maxRounds: model.game.maxRounds,
+            playerScore: model.game.score(for: .player),
+            opponentScore: model.game.score(for: .opponent))
+    }
+
+    /// 8 枚 + スペーシング + 外周パディングの盤面幅。
+    static func boardWidth(forTile tile: CGFloat, compact: Bool = false) -> CGFloat {
+        tile * 8 + gridSpacing(compact: compact) * 7 + boardPadding * 2
+    }
+
+    /// 獲得札サムネイルの幅（compact では札が小さいので下限を設ける）。
+    private func capturedWidth(tile: CGFloat) -> CGFloat {
+        max(tile * 0.47, 30)
+    }
+
     private func opponentArea(tile: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            // 幅が狭いときは裏札を小さく重ねて並べ、右上のスコアボードに潜り込ませない
-            HStack(spacing: isCompactWidth ? -9 : 8) {
+            // 幅が狭いときは裏札を小さく重ねて並べ、同じ行の右端にスコアボードを置く
+            HStack(alignment: .top, spacing: isCompactWidth ? -9 : 8) {
                 ForEach(0..<model.game.hand(for: .opponent).count, id: \.self) { _ in
                     CardBack()
                         .frame(width: isCompactWidth ? 26 : tile * 0.53)
                 }
                 Spacer()
+                if isCompactWidth {
+                    scoreboard
+                }
             }
             YakuBadges(yakus: model.opponentYaku)
             CapturedDetail(
-                cards: model.game.captured(for: .opponent), cardWidth: tile * 0.47)
+                cards: model.game.captured(for: .opponent), cardWidth: capturedWidth(tile: tile))
         }
     }
 
     private func fieldArea(tile: CGFloat) -> some View {
         VStack(spacing: 8) {
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: tile, maximum: tile), spacing: 8)],
-                spacing: 8
+                columns: [
+                    GridItem(
+                        .adaptive(minimum: tile, maximum: tile),
+                        spacing: Self.gridSpacing(compact: isCompactWidth))
+                ],
+                spacing: Self.gridSpacing(compact: isCompactWidth)
             ) {
                 ForEach(Array(model.game.field.enumerated()), id: \.element.id) { index, card in
                     ZStack(alignment: .topTrailing) {
@@ -220,7 +257,7 @@ public struct GameView: View {
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.8))
                         CardImage(drawn)
-                            .frame(width: tile * 0.47)
+                            .frame(width: capturedWidth(tile: tile))
                             .matchedGeometryEffect(id: drawn.id, in: cardSpace)
                     }
                 }
@@ -250,18 +287,31 @@ public struct GameView: View {
     private func playerArea(tile: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             YakuBadges(yakus: model.playerYaku)
-            HStack(alignment: .bottom, spacing: 12) {
+            if isCompactWidth {
+                // 幅が狭いときはリーチを獲得札の下に置く（横並びだと獲得札を隠す）
                 CapturedDetail(
-                    cards: model.game.captured(for: .player), cardWidth: tile * 0.47)
-                Spacer(minLength: 0)
-                // リーチは右側に寄せて獲得札と分離する
+                    cards: model.game.captured(for: .player), cardWidth: capturedWidth(tile: tile))
                 if !model.playerReaches.isEmpty {
                     ReachList(reaches: model.playerReaches)
                 }
+            } else {
+                HStack(alignment: .bottom, spacing: 12) {
+                    CapturedDetail(
+                        cards: model.game.captured(for: .player), cardWidth: capturedWidth(tile: tile))
+                    Spacer(minLength: 0)
+                    // リーチは右側に寄せて獲得札と分離する
+                    if !model.playerReaches.isEmpty {
+                        ReachList(reaches: model.playerReaches)
+                    }
+                }
             }
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: tile, maximum: tile), spacing: 8)],
-                spacing: 8
+                columns: [
+                    GridItem(
+                        .adaptive(minimum: tile, maximum: tile),
+                        spacing: Self.gridSpacing(compact: isCompactWidth))
+                ],
+                spacing: Self.gridSpacing(compact: isCompactWidth)
             ) {
                 // がっちゃんこ中の札は手札からは消し、場札側で描画する
                 ForEach(

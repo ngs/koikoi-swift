@@ -127,10 +127,14 @@ struct CapturedDetail: View {
                                     .font(.caption2)
                                     // matchedGeometryEffect は ScrollView 内で
                                     // サムネイルのジオメトリを壊すため付けない
+                                    // 高さは比率から確定させる（縦が詰まったとき
+                                    // 横スクロールごと 0 に潰れて札が消えるのを防ぐ）
                                     HStack(spacing: -cardWidth * 0.35) {
                                         ForEach(members) { card in
                                             CardImage(card)
-                                                .frame(width: cardWidth)
+                                                .frame(
+                                                    width: cardWidth,
+                                                    height: cardWidth / Card.aspectRatio)
                                         }
                                     }
                                 }
