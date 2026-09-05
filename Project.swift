@@ -1,13 +1,13 @@
 import ProjectDescription
 
-let version = "0.1.0"
-let copyright = "© 2026 Atsushi Nagase. All rights reserved."
+let version = "1.0.0"
+let copyright = "© 2026 LittleApps Inc. All rights reserved."
 
 let buildNumber = Environment.buildNumber.getString(default: "0")
 
 let project = Project(
     name: "Koikoi",
-    organizationName: "Atsushi Nagase",
+    organizationName: "LittleApps Inc.",
     options: .options(
         defaultKnownRegions: ["en", "ja"],
         developmentRegion: "en"
@@ -92,7 +92,10 @@ let project = Project(
                 ]
             ]),
             sources: ["Sources/App/**"],
-            resources: ["Resources/**"],
+            // entitlements は resources グロブから外す（バンドルにコピーされ tuist generate が警告する）
+            resources: [
+                .glob(pattern: "Resources/**", excluding: ["Resources/Koikoi.entitlements"])
+            ],
             entitlements: "Resources/Koikoi.entitlements",
             scripts: [
                 .pre(
