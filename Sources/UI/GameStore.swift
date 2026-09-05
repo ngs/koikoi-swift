@@ -1,5 +1,4 @@
 import Foundation
-import KoikoiCore
 
 /// 進行中の対局を 1 つだけ保持する保存先。
 /// ユーザーにファイルを意識させず、起動時に自動復元するために使う

@@ -7,6 +7,6 @@ Features:
 - Four AI levels, topped by a determinized ISMCTS search engine
 - Play by tap, drag & drop, or keyboard
 - Yaku progress and "reach" (one card away) indicators make it easy to learn
-- One match = one file: save games, resume and review anytime
+- Your game is saved automatically and picks up right where you left off
 - Game Center leaderboards
 - iPhone, iPad, Mac and Apple Vision Pro

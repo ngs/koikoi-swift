@@ -1,5 +1,3 @@
-import KoikoiAI
-import KoikoiCore
 import SwiftUI
 import UniformTypeIdentifiers
 

@@ -30,14 +30,14 @@ public extension Card {
 }
 
 /// 札 1 枚の表面。実物比率を保ち、角丸で描画する。
-public struct CardImage: View {
-    public let card: Card
+struct CardImage: View {
+    let card: Card
 
-    public init(_ card: Card) {
+    init(_ card: Card) {
         self.card = card
     }
 
-    public var body: some View {
+    var body: some View {
         // 札画像はアプリの Assets.xcassets/Cards（メインバンドル）から解決する
         // （内側のグラフィックが角丸なしのため、外側の角丸は控えめにする）
         Image(card.assetName)

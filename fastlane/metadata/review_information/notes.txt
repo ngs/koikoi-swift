@@ -1,1 +1,4 @@
-
+No account or sign-in is required. The app works fully offline.
+Game Center is optional: leaderboards are only reported when the player is signed in.
+The in-progress game is saved locally on the device and restored on the next launch.
+Koi-Koi is a traditional Japanese card game played for points only; there is no wagering, in-app purchase, or real-money element.

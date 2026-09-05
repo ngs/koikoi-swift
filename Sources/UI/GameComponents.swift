@@ -54,28 +54,24 @@ public extension UTType {
 }
 
 /// 手札ドラッグのペイロード（アプリ内 D&D 用）。
-public struct CardDragPayload: Codable, Transferable, Sendable {
-    public let id: Int
+struct CardDragPayload: Codable, Transferable, Sendable {
+    let id: Int
 
-    public init(id: Int) {
-        self.id = id
-    }
-
-    public static var transferRepresentation: some TransferRepresentation {
+    static var transferRepresentation: some TransferRepresentation {
         CodableRepresentation(contentType: .koikoiCard)
     }
 }
 
 /// 札の裏面（赤札 + ドロップシャドウ）。
 /// スタック表示では個別の影が重なって黒ずむため `shadowed: false` で消せる。
-public struct CardBack: View {
+struct CardBack: View {
     private let shadowed: Bool
 
-    public init(shadowed: Bool = true) {
+    init(shadowed: Bool = true) {
         self.shadowed = shadowed
     }
 
-    public var body: some View {
+    var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(Color(red: 0.72, green: 0.18, blue: 0.15))
             .aspectRatio(Card.aspectRatio, contentMode: .fit)

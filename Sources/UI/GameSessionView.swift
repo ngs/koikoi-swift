@@ -1,5 +1,4 @@
 #if !os(visionOS)
-import KoikoiCore
 import SwiftUI
 
 /// iPhone / iPad / macOS のルート画面。

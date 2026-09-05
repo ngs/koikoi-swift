@@ -25,7 +25,7 @@ https://appstoreconnect.apple.com → マイ App → 「+」→ 新規 App
 |---|---|
 | プラットフォーム | iOS・macOS・visionOS の 3 つにチェック（1 レコード共通） |
 | 名前 | App Store 上でユニーク必須（「Koikoi」は競合の可能性大。候補:「こいこい - Koikoi」） |
-| プライマリ言語 | 日本語 |
+| プライマリ言語 | 英語（アプリの primary language に合わせる。作成時に日本語にした場合は App 情報から英語へ変更） |
 | バンドル ID | `io.ngs.Koikoi`（手順 0 の後に選択肢へ出る） |
 | SKU | `io.ngs.Koikoi` などで OK |
 
@@ -38,12 +38,11 @@ App ページ → 「Game Center」→ リーダーボードを 2 つ作成:
 | `io.ngs.Koikoi.totalpoints` | 通常（Classic） | 1 対局の獲得文数 | 高い順・ベスト保持 |
 | `io.ngs.Koikoi.wins` | 通常（Classic） | 勝利数 | 高い順 |
 
-### ⚠️ wins の注意
+### wins の送信について
 
-現在のコードは勝利のたびに「1」を送信するが、Classic リーダーボードは
-**ベストスコア保持**のため全員 1 のまま増えない。
-「累計勝利数をローカルで数えて送信する」コード修正が必要（Claude に依頼で即修正）。
-totalpoints は「1 対局の最高文数」として意味が通るのでそのままで OK。
+Classic リーダーボードはベストスコア保持のため、コードは累計勝利数をローカルで
+数えてから送信する（`GameCenterService.reportMatchEnd`）。totalpoints は
+「1 対局の最高文数」。
 
 ## 3. 審査に必要な App レベル設定
 
@@ -54,14 +53,16 @@ totalpoints は「1 対局の最高文数」として意味が通るのでその
   （より正確には「ユーザー ID（Game Center）」を申告）
 - **価格および配信状況**: 無料 + 配信国
 
-## 4. 初回リリースの流れ（設定完了後）
+## 4. リリースの流れ
 
-1. PR #5 → #6 → #7 → #8 をマージ（各マージ後に次の PR の base を master へ切替:
-   `gh pr edit <n> --base master`）
-2. GitHub Actions → **Release Build and Upload** → Run workflow
-   （まず `skip_upload: true` で署名・ビルドの通し確認を推奨）
-3. 問題なければ `skip_upload: false` で TestFlight へ。
-   以後は master への push → CI green → 自動でリリースビルドが走る
+master への push → CI green → **Release Build and Upload** が自動で走り TestFlight へ
+アップロードされる（手動実行時は `skip_upload: true` で署名・ビルドの通し確認ができる）。
+メタデータの更新は `bundle exec fastlane <ios|mac> deliver_metadata`。
+
+## 5. 提出前に残っている手作業
+
+- スクリーンショット（`fastlane/screenshots/` は空。iPhone 6.9"/6.5"、iPad 13"、Mac、Vision Pro）
+- ASC で審査提出（ビルド選択・年齢制限票の確認）
 
 ## 設定済み（作業不要）
 

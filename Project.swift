@@ -10,7 +10,9 @@ let project = Project(
     organizationName: "LittleApps Inc.",
     options: .options(
         defaultKnownRegions: ["en", "ja"],
-        developmentRegion: "en"
+        developmentRegion: "en",
+        // 札画像は Card.assetName で名前解決するため、生成アクセサは使わない
+        disableSynthesizedResourceAccessors: true
     ),
     packages: [
         .package(path: ".")
