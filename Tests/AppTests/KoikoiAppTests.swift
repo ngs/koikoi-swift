@@ -28,6 +28,17 @@ final class KoikoiAppTests: XCTestCase {
         try renderGameView(width: 1_024, height: 1_366, filename: "game_view_ipad.png")
     }
 
+    /// 横向き iPhone（vertical size class = compact）の三列レイアウトを描画する。
+    /// 出力: /tmp/koikoi_snapshots/game_view_landscape.png
+    @MainActor
+    func testRenderGameViewLandscapeSnapshot() throws {
+        let model = GameViewModel(
+            rounds: 3, difficulty: .normal, seed: 42, aiStepDelay: .seconds(60))
+        try render(
+            model: model, width: 874, height: 402,
+            filename: "game_view_landscape.png", landscapePhone: true)
+    }
+
     /// 1 局対局を最後まで進め、ラウンド終了ダイアログと対局終了ダイアログを描画する。
     /// 出力: /tmp/koikoi_snapshots/game_view_round_end.png / game_view_match_end.png
     /// 対局終了時に onMatchEnd が呼ばれる（= 保存を捨てる）ことも併せて確認する。
@@ -91,26 +102,35 @@ final class KoikoiAppTests: XCTestCase {
         model: GameViewModel,
         width: CGFloat = 640,
         height: CGFloat = 840,
-        filename: String
+        filename: String,
+        landscapePhone: Bool = false
     ) throws {
         // dropTargetsEnabled: ImageRenderer はドロップ受けを禁止マークの
         // プレースホルダとして描くため、スナップショットでは外す
-        let view = GameView(model: model, dropTargetsEnabled: false, onExit: {})
+        let board = GameView(model: model, dropTargetsEnabled: false, onExit: {})
             .frame(width: width, height: height)
+        #if canImport(UIKit)
+        // 横向き iPhone のレイアウトは vertical size class で切り替わる
+        let view = AnyView(
+            board.environment(\.verticalSizeClass, landscapePhone ? .compact : nil))
+        #else
+        let view = AnyView(board)
+        #endif
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
 
-        #if canImport(AppKit)
-        let image = try XCTUnwrap(renderer.nsImage, "GameView failed to render")
         let dir = URL(fileURLWithPath: "/tmp/koikoi_snapshots")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        #if canImport(UIKit)
+        let image = try XCTUnwrap(renderer.uiImage, "GameView failed to render")
+        let png = try XCTUnwrap(image.pngData())
+        #elseif canImport(AppKit)
+        let image = try XCTUnwrap(renderer.nsImage, "GameView failed to render")
         let tiff = try XCTUnwrap(image.tiffRepresentation)
         let png = try XCTUnwrap(
             NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]))
-        try png.write(to: dir.appendingPathComponent(filename))
-        #else
-        XCTAssertNotNil(renderer.uiImage, "GameView failed to render")
         #endif
+        try png.write(to: dir.appendingPathComponent(filename))
     }
 
     /// アプリカタログ（Assets.xcassets/Cards）に 48 枚全ての札画像が

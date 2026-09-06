@@ -12,6 +12,12 @@ public struct GameSessionView: View {
     @State private var didRestore = false
     @Environment(\.scenePhase)
     private var scenePhase
+    #if os(iOS)
+    @Environment(\.verticalSizeClass)
+    private var verticalSizeClass
+    /// 横向き iPhone。盤面に高さの余裕が無いため、スコアボードはツールバーに載せる。
+    private var isLandscapePhone: Bool { verticalSizeClass == .compact }
+    #endif
 
     /// デバッグ用の対局数上書きキー（起動引数 `-KoikoiDebugRounds <n>`）。
     static let debugRoundsKey = "KoikoiDebugRounds"
@@ -24,6 +30,7 @@ public struct GameSessionView: View {
         NavigationStack {
             content
                 .toolbar { quitToolbar }
+                .scoreboardToolbar(model: model, active: showsScoreboardToolbar)
                 .confirmationDialog(
                     Text("Quit this game?", bundle: .module),
                     isPresented: $confirmingQuit,
@@ -80,6 +87,15 @@ public struct GameSessionView: View {
         }
     }
 
+    /// 横向き iPhone のときだけスコアボードをツールバー中央に載せる。
+    private var showsScoreboardToolbar: Bool {
+        #if os(iOS)
+        return isLandscapePhone
+        #else
+        return false
+        #endif
+    }
+
     /// Game Center のアクセスポイント（左上固定）と重ならないよう右上に置く。
     private static var quitPlacement: ToolbarItemPlacement {
         #if os(macOS)
@@ -121,6 +137,27 @@ public struct GameSessionView: View {
         store.clear()
         model = nil
         record = nil
+    }
+}
+
+private extension View {
+    /// 終了ボタンと同じバーの中央にスコアボード（1 行版）を置く。
+    @ViewBuilder
+    func scoreboardToolbar(model: GameViewModel?, active: Bool) -> some View {
+        #if os(iOS)
+        if let model, active {
+            toolbar {
+                ToolbarItem(placement: .principal) {
+                    GameScoreboard(model: model, style: .strip)
+                        .fixedSize()
+                }
+            }
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
     }
 }
 #endif

@@ -20,6 +20,15 @@ extension View {
     }
 }
 
+/// `fixedSize()` を条件付きで適用する（分岐で View の同一性を変えないため modifier にする）。
+struct ConditionalFixedSize: ViewModifier {
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        content.fixedSize(horizontal: enabled, vertical: enabled)
+    }
+}
+
 /// 白地から文字を切り抜いたバッジ（背景が文字の形に透ける）。
 struct PunchedBadge: View {
     let text: String
@@ -74,6 +83,12 @@ struct CardBack: View {
     var body: some View {
         CardShape()
             .fill(Color(red: 0.72, green: 0.18, blue: 0.15))
+            // 暗い縁取りで、重ねたときも 1 枚ずつの境界が見えるようにする
+            .overlay {
+                CardShape()
+                    .stroke(Color(red: 0.35, green: 0.05, blue: 0.04), lineWidth: 1)
+                    .padding(0.5)
+            }
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
             .shadow(color: .black.opacity(shadowed ? 0.45 : 0), radius: 2, x: 0, y: 1)
     }
@@ -85,11 +100,14 @@ struct CapturedDetail: View {
     let cards: [Card]
     let reaches: [YakuReach]
     let cardWidth: CGFloat
+    /// 並べる向き。横向き iPhone の左右カラムでは縦に積む（横スクロールは使えない）。
+    let axis: Axis
 
-    init(cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat) {
+    init(cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat, axis: Axis = .horizontal) {
         self.cards = cards
         self.reaches = reaches
         self.cardWidth = cardWidth
+        self.axis = axis
     }
 
     private struct Group: Identifiable {
@@ -104,27 +122,23 @@ struct CapturedDetail: View {
     ]
 
     var body: some View {
+        if axis == .vertical {
+            verticalBody
+        } else {
+            horizontalBody
+        }
+    }
+
+    private var horizontalBody: some View {
         VStack(alignment: .leading, spacing: 2) {
             if !cards.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 8) {
                         ForEach(Self.groups) { group in
-                            let members = cards
-                                .filter { $0.type == group.type }
-                                .sorted { $0.id < $1.id }
+                            let members = members(of: group)
                             if !members.isEmpty {
                                 VStack(alignment: .leading, spacing: 1) {
-                                    HStack(spacing: 4) {
-                                        Text(verbatim: group.label)
-                                            .foregroundStyle(.white.opacity(0.85))
-                                        Text("\(members.count)")
-                                            .font(.caption2.bold().monospacedDigit())
-                                            .padding(.horizontal, 5)
-                                            .padding(.vertical, 1)
-                                            .background(.white.opacity(0.18), in: Capsule())
-                                            .foregroundStyle(.white)
-                                    }
-                                    .font(.caption2)
+                                    label(for: group, count: members.count)
                                     // matchedGeometryEffect は ScrollView 内で
                                     // サムネイルのジオメトリを壊すため付けない
                                     // 高さは比率から確定させる（縦が詰まったとき
@@ -150,11 +164,57 @@ struct CapturedDetail: View {
             }
         }
     }
+
+    /// 縦積み。細い列に収めるため札は重ねずグリッドで折り返す（リーチは呼び出し側が別に描く）。
+    private var verticalBody: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(Self.groups) { group in
+                let members = members(of: group)
+                if !members.isEmpty {
+                    VStack(alignment: .leading, spacing: 1) {
+                        label(for: group, count: members.count)
+                        LazyVGrid(
+                            columns: [
+                                GridItem(
+                                    .adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 2)
+                            ],
+                            spacing: 2
+                        ) {
+                            ForEach(members) { card in
+                                CardImage(card)
+                                    .frame(width: cardWidth, height: cardWidth / Card.aspectRatio)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func members(of group: Group) -> [Card] {
+        cards.filter { $0.type == group.type }.sorted { $0.id < $1.id }
+    }
+
+    private func label(for group: Group, count: Int) -> some View {
+        HStack(spacing: 4) {
+            Text(verbatim: group.label)
+                .foregroundStyle(.white.opacity(0.85))
+            Text("\(count)")
+                .font(.caption2.bold().monospacedDigit())
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(.white.opacity(0.18), in: Capsule())
+                .foregroundStyle(.white)
+        }
+        .font(.caption2)
+    }
 }
 
 /// リーチ一覧のパネル（タイトル + 役名バッジ + 不足札名）。
 struct ReachList: View {
     let reaches: [YakuReach]
+    /// 狭い列に置くとき、不足札名を折り返して幅に収める。
+    var wraps: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -171,6 +231,7 @@ struct ReachList: View {
                             .gridColumnAlignment(.trailing)
                         Text(verbatim: missingText(for: reach))
                             .font(.caption)
+                            .fixedSize(horizontal: false, vertical: wraps)
                     }
                 }
             }
@@ -181,7 +242,7 @@ struct ReachList: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(.white.opacity(0.45), lineWidth: 1.5)
         }
-        .fixedSize()
+        .modifier(ConditionalFixedSize(enabled: !wraps))
     }
 
     private func missingText(for reach: YakuReach) -> String {
@@ -194,39 +255,71 @@ struct ReachList: View {
 
 /// 月・局・両者の得点をまとめたスコアボード（リーチパネルと同じ様式）。
 struct ScoreboardPanel: View {
+    /// 置き場所に応じた形。`panel` は縦積み、`strip` は 1 行の横長（横向き iPhone の上端）。
+    enum Style {
+        case panel
+        case strip
+    }
+
     let monthName: String
     let round: Int
     let maxRounds: Int
     let playerScore: Int
     let opponentScore: Int
+    var style: Style = .panel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 16) {
-                Text(verbatim: monthName)
-                    .font(.system(size: 14.5, weight: .bold))  // caption の約 120%
-                Spacer(minLength: 0)
-                PunchedBadge(
-                    text: "\(round)/\(maxRounds)",
-                    font: .caption2.bold().monospacedDigit())
+        content
+            .foregroundStyle(.white)
+            .padding(.horizontal, style == .strip ? 8 : 10)
+            .padding(.vertical, style == .strip ? 6 : 10)
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(.white.opacity(0.45), lineWidth: 1.5)
             }
-            Rectangle()
-                .fill(.white.opacity(0.35))
-                .frame(height: 1)
+            .fixedSize()
+    }
+
+    @ViewBuilder private var content: some View {
+        switch style {
+        case .panel:
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 16) {
+                    Text(verbatim: monthName)
+                        .font(.system(size: 14.5, weight: .bold))  // caption の約 120%
+                    Spacer(minLength: 0)
+                    roundBadge
+                }
+                Rectangle()
+                    .fill(.white.opacity(0.35))
+                    .frame(height: 1)
+                HStack(spacing: 10) {
+                    scoreTile(score: playerScore, label: String(localized: "You", bundle: .module))
+                    scoreTile(
+                        score: opponentScore,
+                        label: String(localized: "Opponent", bundle: .module))
+                }
+            }
+        case .strip:
             HStack(spacing: 10) {
-                scoreTile(score: playerScore, label: String(localized: "You", bundle: .module))
-                scoreTile(
+                Text(verbatim: monthName)
+                    .font(.headline)
+                roundBadge
+                Rectangle()
+                    .fill(.white.opacity(0.35))
+                    .frame(width: 1, height: 18)
+                inlineScore(score: playerScore, label: String(localized: "You", bundle: .module))
+                inlineScore(
                     score: opponentScore,
                     label: String(localized: "Opponent", bundle: .module))
             }
         }
-        .foregroundStyle(.white)
-        .padding(10)
-        .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(.white.opacity(0.45), lineWidth: 1.5)
-        }
-        .fixedSize()
+    }
+
+    private var roundBadge: some View {
+        PunchedBadge(
+            text: "\(round)/\(maxRounds)",
+            font: .caption2.bold().monospacedDigit())
     }
 
     private func scoreTile(score: Int, label: String) -> some View {
@@ -240,6 +333,36 @@ struct ScoreboardPanel: View {
             Text(verbatim: label)
                 .font(.caption2)
         }
+    }
+
+    /// 1 行版の得点（ラベルはバッジの下ではなく横に置く）。
+    private func inlineScore(score: Int, label: String) -> some View {
+        HStack(spacing: 4) {
+            Text(verbatim: label)
+                .font(.caption2)
+            PunchedBadge(
+                text: "\(score)",
+                font: .subheadline.bold().monospacedDigit(),
+                verticalPadding: 3,
+                cornerRadius: 6,
+                minWidth: 36)
+        }
+    }
+}
+
+/// 対局の状態からスコアボードを組み立てる（盤面とツールバーで月・局の算出を共有する）。
+struct GameScoreboard: View {
+    let model: GameViewModel
+    var style: ScoreboardPanel.Style = .panel
+
+    var body: some View {
+        ScoreboardPanel(
+            monthName: Month(rawValue: (model.game.round - 1) % 12)?.localizedMonthName ?? "",
+            round: model.game.round,
+            maxRounds: model.game.maxRounds,
+            playerScore: model.game.score(for: .player),
+            opponentScore: model.game.score(for: .opponent),
+            style: style)
     }
 }
 

@@ -39,4 +39,70 @@ import Testing
         #expect(tile < GameView.maxCardTileWidth)
         #expect(tile * 8 + 8 * 7 + GameView.boardPadding * 2 <= width + 0.5)
     }
+
+    /// 横向き iPhone: 中央幅と高さの小さい方で札幅が決まる。
+    @Test func landscapePhoneTileFitsBothWidthAndHeight() {
+        // iPhone 17 Pro の画面（874×402）と、セーフエリアを引いた実測サイズ（756×381）
+        let full = GameView.landscapeTileWidth(forBoardSize: CGSize(width: 874, height: 402))
+        let inset = GameView.landscapeTileWidth(forBoardSize: CGSize(width: 756, height: 381))
+        for tile in [full, inset] {
+            #expect(tile >= GameView.minCompactTileWidth)
+            #expect(tile <= GameView.maxCardTileWidth)
+        }
+        // セーフエリアを引いた方が狭いぶん札も小さい
+        #expect(inset < full)
+        // 中央カラムに山札 + 場札 8 枚 + 7 スペーシングが 1 行で収まる
+        #expect(rowWithDeckWidth(tile: inset) <= centerWidth(forBoardWidth: 756) + 0.5)
+    }
+
+    /// 縦に余裕がある（が横向き扱いの）サイズでは幅で決まる。
+    @Test func landscapeTileIsWidthLimitedWhenTallEnough() {
+        let size = CGSize(width: 1_024, height: 768)
+        let tile = GameView.landscapeTileWidth(forBoardSize: size)
+        #expect(tile < GameView.maxCardTileWidth)
+        // 山札 + 8 枚が中央幅ぴったりに収まり、1pt 広げるともう入らない
+        let center = centerWidth(forBoardWidth: size.width)
+        #expect(rowWithDeckWidth(tile: tile) <= center + 0.5)
+        #expect(rowWithDeckWidth(tile: tile + 1) > center)
+    }
+
+    /// 縦が足りないときは高さが札幅を決める（横幅から決まる値より小さくなる）。
+    @Test func landscapeTileIsHeightLimitedWhenShort() {
+        let size = CGSize(width: 900, height: 340)
+        let tile = GameView.landscapeTileWidth(forBoardSize: size)
+        let spacing = GameView.gridSpacing(compact: true)
+        let centerWidth =
+            size.width - GameView.boardPadding * 2
+            - 2 * (GameView.landscapeSideColumnWidth + GameView.landscapeColumnSpacing)
+        #expect(tile < floor((centerWidth - spacing * 7) / 8))
+        #expect(tile > GameView.minCompactTileWidth)
+    }
+
+    /// 高さが極端に足りない場合は下限まで縮み、それ以下にはならない。
+    @Test func landscapeTileClampsToMinimumWhenTooShort() {
+        #expect(
+            GameView.landscapeTileWidth(forBoardSize: CGSize(width: 900, height: 220))
+                == GameView.minCompactTileWidth)
+        #expect(
+            GameView.landscapeTileWidth(forBoardSize: .zero) == GameView.minCompactTileWidth)
+    }
+
+    /// 横向きの相手裏札 8 枚が側方カラムの幅に収まる（中央にはみ出さない）。
+    @Test func landscapeOpponentBacksFitTheSideColumn() {
+        let width = GameView.landscapeOpponentBackWidth
+        let spacing = GameView.landscapeOpponentBackSpacing
+        #expect(spacing < 0)  // 重ねて並べる
+        #expect(width * 8 + spacing * 7 <= GameView.landscapeSideColumnWidth)
+    }
+
+    /// 左右の列を除いた中央カラムの幅。
+    private func centerWidth(forBoardWidth width: CGFloat) -> CGFloat {
+        width - GameView.boardPadding * 2
+            - 2 * (GameView.landscapeSideColumnWidth + GameView.landscapeColumnSpacing)
+    }
+
+    /// 山札 + 場札 8 枚 + スペーシングの行幅。
+    private func rowWithDeckWidth(tile: CGFloat) -> CGFloat {
+        tile * 0.62 + 12 + tile * 8 + GameView.gridSpacing(compact: true) * 7
+    }
 }
