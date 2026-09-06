@@ -391,6 +391,25 @@ struct ScoreboardPanel: View {
     }
 }
 
+/// 横向きの側方カラムのスクロール。負のパディングでスクロール領域を
+/// 画面の物理的な上端・下端まで広げ、同じ量を内容の余白として戻す。
+/// 静止時の先頭/末尾はセーフエリアの内側に来つつ、送った中身は
+/// ツールバーのガラスの下と画面端まで描かれる。
+struct SideColumnScroll: ViewModifier {
+    /// 盤面の上端から画面上端まで（セーフエリア + 盤面の外周パディング）。
+    let topMargin: CGFloat
+    /// 盤面の下端から画面下端まで。
+    let bottomMargin: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .contentMargins(.top, topMargin, for: .scrollContent)
+            .contentMargins(.bottom, bottomMargin, for: .scrollContent)
+            .padding(.top, -topMargin)
+            .padding(.bottom, -bottomMargin)
+    }
+}
+
 /// 対局の状態からスコアボードを組み立てる（盤面とツールバーで月・局の算出を共有する）。
 struct GameScoreboard: View {
     let model: GameViewModel

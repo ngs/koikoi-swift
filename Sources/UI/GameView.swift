@@ -48,8 +48,13 @@ public struct GameView: View {
     /// compact 幅（iPhone 縦）での札タイル幅の下限。
     static let minCompactTileWidth: CGFloat = 40
 
+    /// 横向き iPhone の外周パディング。左右はセーフエリアの内側ぎりぎりまで使い、
+    /// 上下だけ通常どおり空ける（左右の余白は島のインセットで既に十分ある）。
+    static let landscapeHorizontalPadding: CGFloat = 0
+    static let landscapeVerticalPadding: CGFloat = boardPadding
     /// 横向き iPhone で盤面の左右に置く列（相手陣 / 自陣の情報）の幅。
-    static let landscapeSideColumnWidth: CGFloat = 120
+    /// 獲得札サムネイル 4 枚 + 間隔（4×30 + 3×2 = 126pt）が 1 行に収まる幅。
+    static let landscapeSideColumnWidth: CGFloat = 128
     /// 横向きレイアウトの 3 カラム間のスペーシング。
     static let landscapeColumnSpacing: CGFloat = 12
     /// 横向きの相手裏札の幅と重ね幅（8 枚が側方カラム 120pt に収まる大きさ）。
@@ -92,13 +97,14 @@ public struct GameView: View {
         guard size.width > 0, size.height > 0 else { return minCompactTileWidth }
         let spacing = gridSpacing(compact: true)
         let centerWidth =
-            size.width - boardPadding * 2
+            size.width - landscapeHorizontalPadding * 2
             - 2 * (landscapeSideColumnWidth + landscapeColumnSpacing)
         // 場札の横には山札（tile * 0.62 + 間隔 12pt）が並ぶので、その分も幅から解く
         let widthBased = floor((centerWidth - 12 - spacing * 7) / (8 + 0.62))
         // 外周パディング・ステータス行（約 20pt）・グリッド間隔・VStack のスペーシングを引く
         // （スコアボードはツールバーにあるので盤面の高さは使わない）
-        let availableHeight = size.height - boardPadding * 2 - 20 - spacing * 2 - 8 * 2
+        let availableHeight =
+            size.height - landscapeVerticalPadding * 2 - 20 - spacing * 2 - 8 * 2
         let heightBased = floor(((availableHeight - spacing * 2) / 3) * Card.aspectRatio)
         return min(max(min(widthBased, heightBased), minCompactTileWidth), maxCardTileWidth)
     }
@@ -141,7 +147,8 @@ public struct GameView: View {
             board(
                 tile: isLandscapePhone
                     ? Self.landscapeTileWidth(forBoardSize: proxy.size)
-                    : Self.tileWidth(forBoardWidth: proxy.size.width, compact: isCompactWidth))
+                    : Self.tileWidth(forBoardWidth: proxy.size.width, compact: isCompactWidth),
+                insets: proxy.safeAreaInsets)
         }
         // 場札・手札 8 枚が 1 行に収まる最小幅（ウィンドウをリサイズできる macOS のみ。
         // iPhone では画面幅を超えて盤面がはみ出すため、グリッドの折り返しに任せる）
@@ -177,7 +184,7 @@ public struct GameView: View {
         }
     }
 
-    private func board(tile: CGFloat) -> some View {
+    private func board(tile: CGFloat, insets: EdgeInsets) -> some View {
         ZStack {
             #if os(visionOS)
             // visionOS はウィンドウのガラスをそのまま透過させる（緑ベタは敷かない）
@@ -187,7 +194,7 @@ public struct GameView: View {
                 .ignoresSafeArea()
             #endif
             if isLandscapePhone {
-                landscapeBoard(tile: tile)
+                landscapeBoard(tile: tile, insets: insets)
             } else {
                 // 相手陣は上端・自陣は下端に固定し、山札・場札はセンターに置く
                 // （ウィンドウを広げた分は手札とフィールドの間に入る）
@@ -209,31 +216,30 @@ public struct GameView: View {
     // MARK: - 横向き iPhone のレイアウト
 
     /// 横向き iPhone: 自分の情報（左）・場と手札（中央）・相手情報（右）の三列。
-    private func landscapeBoard(tile: CGFloat) -> some View {
+    private func landscapeBoard(tile: CGFloat, insets: EdgeInsets) -> some View {
         HStack(alignment: .top, spacing: Self.landscapeColumnSpacing) {
             // 他の花札ゲームやスコアボードの並び（You | Opponent）に合わせ、自分を左に置く
-            landscapePlayerColumn()
+            // 幅の固定だけで足りる（横のはみ出しは ScrollView 自身が切る）
+            landscapePlayerColumn(insets: insets)
                 .frame(width: Self.landscapeSideColumnWidth, alignment: .leading)
-                .clipped()
             landscapeCenterColumn(tile: tile)
                 .frame(maxWidth: .infinity)
                 // 中央で動く札が側方カラムに隠れないようにする
                 .zIndex(1)
-            landscapeOpponentColumn()
+            landscapeOpponentColumn(insets: insets)
                 .frame(width: Self.landscapeSideColumnWidth, alignment: .leading)
-                .clipped()
         }
-        .padding(Self.boardPadding)
+        .padding(.horizontal, Self.landscapeHorizontalPadding)
+        .padding(.vertical, Self.landscapeVerticalPadding)
         // 列の中身が伸びても盤面の高さを超えない（手札が画面外に押し出されるのを防ぐ）
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    private func landscapeOpponentColumn() -> some View {
+    private func landscapeOpponentColumn(insets: EdgeInsets) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             // 獲得札が増えても列が伸びて中央の手札を押し出さないようスクロールに収める
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 6) {
-                    columnHeader(Text("Opponent", bundle: .module))
                     // 影は 1 枚ごとではなく列全体に 1 つ落とす（重ねたとき縁が黒ずまない）
                     HStack(spacing: Self.landscapeOpponentBackSpacing) {
                         ForEach(0..<model.game.hand(for: .opponent).count, id: \.self) { _ in
@@ -255,14 +261,15 @@ public struct GameView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .modifier(Self.sideColumnScroll(insets: insets))
         }
     }
 
-    /// 側方カラムの見出し（どちらが相手でどちらが自分かを示す）。
-    private func columnHeader(_ title: Text) -> some View {
-        title
-            .font(.title3.bold())
-            .foregroundStyle(palette.ink)
+    /// 側方カラムのスクロール設定（画面端まで広げ、同じ量を内容の余白に戻す）。
+    private static func sideColumnScroll(insets: EdgeInsets) -> SideColumnScroll {
+        SideColumnScroll(
+            topMargin: insets.top + landscapeVerticalPadding,
+            bottomMargin: insets.bottom + landscapeVerticalPadding)
     }
 
     private func landscapeCenterColumn(tile: CGFloat) -> some View {
@@ -289,10 +296,9 @@ public struct GameView: View {
         }
     }
 
-    private func landscapePlayerColumn() -> some View {
+    private func landscapePlayerColumn(insets: EdgeInsets) -> some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 6) {
-                columnHeader(Text("You", bundle: .module))
                 YakuBadges(yakus: model.playerYaku, stacked: true)
                 CapturedDetail(
                     cards: model.game.captured(for: .player),
@@ -300,10 +306,12 @@ public struct GameView: View {
                     columns: Self.capturedColumns(forWidth: Self.landscapeSideColumnWidth))
                 if !model.playerReaches.isEmpty {
                     ReachList(reaches: model.playerReaches, wraps: true)
+                        .padding(.top, 10)  // 獲得札との間を空ける
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .modifier(Self.sideColumnScroll(insets: insets))
     }
 
     private func move(_ direction: GameViewModel.MoveDirection) -> KeyPress.Result {

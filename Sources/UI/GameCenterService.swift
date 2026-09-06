@@ -20,6 +20,8 @@ public final class GameCenterService {
 
     public private(set) var isAuthenticated = false
     private var didStartAuthentication = false
+    /// アクセスポイントを出してよい画面か（対局中は盤面の見出しと重なるため隠す）。
+    private var accessPointVisible = true
 
     private init() {}
 
@@ -38,9 +40,16 @@ public final class GameCenterService {
                 self?.isAuthenticated = true
                 GKAccessPoint.shared.location = .topLeading
                 GKAccessPoint.shared.showHighlights = false
-                GKAccessPoint.shared.isActive = true
+                GKAccessPoint.shared.isActive = self?.accessPointVisible ?? true
             }
         }
+    }
+
+    /// アクセスポイントの表示を切り替える（対局中は隠し、対局設定画面では出す）。
+    public func setAccessPointVisible(_ visible: Bool) {
+        accessPointVisible = visible
+        guard isAuthenticated else { return }
+        GKAccessPoint.shared.isActive = visible
     }
 
     /// サインイン UI を最前面から提示する。

@@ -33,8 +33,14 @@ public struct GameSessionView: View {
     public var body: some View {
         NavigationStack {
             content
-                .toolbar { quitToolbar }
-                .scoreboardToolbar(model: model, active: showsScoreboardToolbar)
+                .quitToolbar(active: model != nil && !showsLandscapeChrome) {
+                    confirmingQuit = true
+                }
+                .landscapeChromeToolbar(
+                    model: model, active: showsLandscapeChrome, palette: palette
+                ) {
+                    confirmingQuit = true
+                }
                 .confirmationDialog(
                     Text("Quit this game?", bundle: .module),
                     isPresented: $confirmingQuit,
@@ -48,14 +54,25 @@ public struct GameSessionView: View {
                     Text("The saved game will be deleted.", bundle: .module)
                 }
         }
+        // 対局中は卓の色で画面全体を塗る（横向きでセーフエリアの帯が黒く残らないように）
+        .background {
+            if model != nil {
+                palette.table.ignoresSafeArea()
+            }
+        }
         .koikoiTheme(theme)
         .onAppear {
             GameCenterService.shared.authenticate()
+            // Game Center のアクセスポイントは左上の見出しと場所を取り合うため対局中は隠す
+            GameCenterService.shared.setAccessPointVisible(model == nil)
             guard !didRestore else { return }
             didRestore = true
             if let saved = store.load() {
                 start(record: saved)
             }
+        }
+        .onChange(of: model == nil) { _, isSetup in
+            GameCenterService.shared.setAccessPointVisible(isSetup)
         }
         .onChange(of: scenePhase) { _, phase in
             // バックグラウンド遷移時の保険（通常は 1 手ごとに保存済み）
@@ -79,34 +96,14 @@ public struct GameSessionView: View {
         }
     }
 
-    @ToolbarContentBuilder private var quitToolbar: some ToolbarContent {
-        if model != nil {
-            ToolbarItem(placement: Self.quitPlacement) {
-                Button(
-                    String(localized: "Quit Game", bundle: .module),
-                    systemImage: "xmark"
-                ) {
-                    confirmingQuit = true
-                }
-            }
-        }
-    }
+    private var palette: KoikoiPalette { KoikoiPalette(theme: theme) }
 
-    /// 横向き iPhone のときだけスコアボードをツールバー中央に載せる。
-    private var showsScoreboardToolbar: Bool {
+    /// 横向き iPhone のときだけ、スコアボードと陣営の見出しをツールバーに載せる。
+    private var showsLandscapeChrome: Bool {
         #if os(iOS)
-        return isLandscapePhone
+        return isLandscapePhone && model != nil
         #else
         return false
-        #endif
-    }
-
-    /// Game Center のアクセスポイント（左上固定）と重ならないよう右上に置く。
-    private static var quitPlacement: ToolbarItemPlacement {
-        #if os(macOS)
-        return .primaryAction
-        #else
-        return .topBarTrailing
         #endif
     }
 
@@ -146,17 +143,49 @@ public struct GameSessionView: View {
 }
 
 private extension View {
-    /// 終了ボタンと同じバーの中央にスコアボード（1 行版）を置く。
+    /// 対局をやめるボタン（縦向き・iPad・macOS 用）。
     @ViewBuilder
-    func scoreboardToolbar(model: GameViewModel?, active: Bool) -> some View {
+    func quitToolbar(active: Bool, quit: @escaping () -> Void) -> some View {
+        if active {
+            toolbar {
+                ToolbarItem(placement: KoikoiToolbar.quitPlacement) {
+                    KoikoiToolbar.quitButton(quit)
+                }
+            }
+        } else {
+            self
+        }
+    }
+
+    /// 横向き iPhone のツールバー: 左に「You」、中央にスコアボード、
+    /// 右に「Opponent」と終了ボタン（X が一番外側）。
+    @ViewBuilder
+    func landscapeChromeToolbar(
+        model: GameViewModel?, active: Bool, palette: KoikoiPalette,
+        quit: @escaping () -> Void
+    ) -> some View {
         #if os(iOS)
         if let model, active {
             toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    KoikoiToolbar.header(Text("You", bundle: .module), palette: palette)
+                }
+                // 見出しはボタンではないので項目ごとの地は敷かない（ぼかしはバーが担う）
+                .sharedBackgroundVisibility(.hidden)
                 ToolbarItem(placement: .principal) {
                     GameScoreboard(model: model, style: .strip)
                         .fixedSize()
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    KoikoiToolbar.header(Text("Opponent", bundle: .module), palette: palette)
+                }
+                .sharedBackgroundVisibility(.hidden)
+                ToolbarItem(placement: .topBarTrailing) {
+                    KoikoiToolbar.quitButton(quit)
+                }
             }
+            // 下を流れる札は、バー自体のぼかし越しに見せる
+            .toolbarBackgroundVisibility(.visible, for: .navigationBar)
         } else {
             self
         }
@@ -164,5 +193,35 @@ private extension View {
         self
         #endif
     }
+}
+
+/// ツールバーの部品（縦向き・横向きで同じボタンと見出しを使う）。
+private enum KoikoiToolbar {
+    /// Game Center のアクセスポイント（左上固定）と重ならないよう右上に置く。
+    static var quitPlacement: ToolbarItemPlacement {
+        #if os(macOS)
+        return .primaryAction
+        #else
+        return .topBarTrailing
+        #endif
+    }
+
+    @MainActor
+    static func quitButton(_ quit: @escaping () -> Void) -> some View {
+        Button(String(localized: "Quit Game", bundle: .module), systemImage: "xmark") {
+            quit()
+        }
+    }
+
+    #if os(iOS)
+    /// 横向きのツールバーに置く陣営の見出し（ボタンに見えないよう文字だけ）。
+    @MainActor
+    static func header(_ title: Text, palette: KoikoiPalette) -> some View {
+        title
+            .font(.title3.bold())
+            .foregroundStyle(palette.ink)
+            .fixedSize()  // ツールバーに詰められて 1 文字に切られないようにする
+    }
+    #endif
 }
 #endif

@@ -95,19 +95,26 @@ import Testing
         #expect(width * 8 + spacing * 7 <= GameView.landscapeSideColumnWidth)
     }
 
-    /// 側方カラム（120pt）には獲得札サムネイルが 1 行 3 枚だけ入る。
-    @Test func capturedThumbnailsWrapAtThreePerRow() {
-        #expect(GameView.capturedColumns(forWidth: GameView.landscapeSideColumnWidth) == 3)
+    /// 側方カラム（128pt）には獲得札サムネイルが 1 行 4 枚だけ入る。
+    @Test func capturedThumbnailsWrapAtFourPerRow() {
+        #expect(GameView.capturedColumns(forWidth: GameView.landscapeSideColumnWidth) == 4)
         let thumbnail = GameView.landscapeCapturedThumbnail
         let spacing = GameView.landscapeCapturedSpacing
-        // 3 枚は収まり、4 枚目は入らない
-        #expect(thumbnail * 3 + spacing * 2 <= GameView.landscapeSideColumnWidth)
-        #expect(thumbnail * 4 + spacing * 3 > GameView.landscapeSideColumnWidth)
+        // 4 枚は収まり、5 枚目は入らない
+        #expect(thumbnail * 4 + spacing * 3 <= GameView.landscapeSideColumnWidth)
+        #expect(thumbnail * 5 + spacing * 4 > GameView.landscapeSideColumnWidth)
+    }
+
+    /// 相手の裏札 8 枚も同じカラムに収まったままである。
+    @Test func opponentBacksStillFitTheWiderColumn() {
+        let width = GameView.landscapeOpponentBackWidth
+        let spacing = GameView.landscapeOpponentBackSpacing
+        #expect(width * 8 + spacing * 7 <= GameView.landscapeSideColumnWidth)
     }
 
     /// 左右の列を除いた中央カラムの幅。
     private func centerWidth(forBoardWidth width: CGFloat) -> CGFloat {
-        width - GameView.boardPadding * 2
+        width - GameView.landscapeHorizontalPadding * 2
             - 2 * (GameView.landscapeSideColumnWidth + GameView.landscapeColumnSpacing)
     }
 
