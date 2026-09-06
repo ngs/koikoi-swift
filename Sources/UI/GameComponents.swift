@@ -310,13 +310,15 @@ struct DeckStack: View {
                 }
             }
             // 影は 1 枚ごとではなくスタック全体に薄く 1 つだけ落とす
+            // （compositingGroup が無いと子ビューごとに影が付き、縁が段々に黒ずむ）
+            .compositingGroup()
             .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
             .padding(.top, CGFloat(remaining) * step)
             .padding(.trailing, CGFloat(remaining) * 0.3)
             .animation(.default, value: remaining)
         } else {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(.white.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [5]))
+            CardShape()
+                .stroke(.white.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [5]))
                 .frame(width: cardWidth, height: cardHeight)
         }
     }

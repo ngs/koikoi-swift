@@ -199,10 +199,15 @@ public struct GameView: View {
         VStack(alignment: .leading, spacing: 4) {
             // 幅が狭いときは裏札を小さく重ねて並べ、同じ行の右端にスコアボードを置く
             HStack(alignment: .top, spacing: isCompactWidth ? -9 : 8) {
-                ForEach(0..<model.game.hand(for: .opponent).count, id: \.self) { _ in
-                    CardBack()
-                        .frame(width: isCompactWidth ? 26 : tile * 0.53)
+                // 影は 1 枚ごとではなく列全体に 1 つ落とす（重ねたとき縁が黒ずまない）
+                HStack(spacing: isCompactWidth ? -9 : 8) {
+                    ForEach(0..<model.game.hand(for: .opponent).count, id: \.self) { _ in
+                        CardBack(shadowed: false)
+                            .frame(width: isCompactWidth ? 26 : tile * 0.53)
+                    }
                 }
+                .compositingGroup()
+                .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
                 Spacer()
                 if isCompactWidth {
                     scoreboard
