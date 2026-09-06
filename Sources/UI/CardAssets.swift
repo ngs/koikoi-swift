@@ -29,6 +29,16 @@ public extension Card {
     ]
 }
 
+/// 札の輪郭。角丸は幅に対する比率で決め、表・裏・選択枠で同じ形になるようにする
+/// （実物の札は幅 33mm に対しておよそ 2mm の角丸）。
+struct CardShape: Shape {
+    static let cornerRatio: CGFloat = 0.07
+
+    func path(in rect: CGRect) -> Path {
+        Path(roundedRect: rect, cornerRadius: rect.width * Self.cornerRatio, style: .continuous)
+    }
+}
+
 /// 札 1 枚の表面。実物比率を保ち、角丸で描画する。
 struct CardImage: View {
     let card: Card
@@ -39,11 +49,10 @@ struct CardImage: View {
 
     var body: some View {
         // 札画像はアプリの Assets.xcassets/Cards（メインバンドル）から解決する
-        // （内側のグラフィックが角丸なしのため、外側の角丸は控えめにする）
         Image(card.assetName)
             .resizable()
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+            .clipShape(CardShape())
             .accessibilityLabel(Text(verbatim: card.localizedName))
     }
 }

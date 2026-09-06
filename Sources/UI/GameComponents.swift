@@ -72,7 +72,7 @@ struct CardBack: View {
     }
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
+        CardShape()
             .fill(Color(red: 0.72, green: 0.18, blue: 0.15))
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
             .shadow(color: .black.opacity(shadowed ? 0.45 : 0), radius: 2, x: 0, y: 1)
@@ -276,7 +276,7 @@ struct PulsingRing: View {
     @State private var pulsing = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 3, style: .continuous)
+        CardShape()
             .stroke(.yellow, lineWidth: 3)
             .opacity(pulsing ? 1.0 : 0.35)
             .onAppear {
@@ -344,7 +344,7 @@ struct FieldCardView: View {
                         PulsingRing()
                     }
                     if focused {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        CardShape()
                             .stroke(.white, lineWidth: 3)
                             .padding(-3)
                     }
@@ -374,7 +374,7 @@ struct HandCardView: View {
                         PulsingRing()
                     }
                     if focused {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        CardShape()
                             .stroke(.white, lineWidth: 3)
                             .padding(-3)
                     }
