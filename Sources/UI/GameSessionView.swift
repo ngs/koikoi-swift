@@ -33,26 +33,12 @@ public struct GameSessionView: View {
     public var body: some View {
         NavigationStack {
             content
-                .quitToolbar(active: model != nil && !showsLandscapeChrome) {
-                    confirmingQuit = true
-                }
+                .quitToolbar(
+                    active: model != nil && !showsLandscapeChrome,
+                    confirming: $confirmingQuit, quit: quit)
                 .landscapeChromeToolbar(
-                    model: model, active: showsLandscapeChrome, palette: palette
-                ) {
-                    confirmingQuit = true
-                }
-                .confirmationDialog(
-                    Text("Quit this game?", bundle: .module),
-                    isPresented: $confirmingQuit,
-                    titleVisibility: .visible
-                ) {
-                    Button(String(localized: "Quit", bundle: .module), role: .destructive) {
-                        quit()
-                    }
-                    Button(String(localized: "Continue", bundle: .module), role: .cancel) {}
-                } message: {
-                    Text("The saved game will be deleted.", bundle: .module)
-                }
+                    model: model, active: showsLandscapeChrome, palette: palette,
+                    confirming: $confirmingQuit, quit: quit)
         }
         // 対局中は卓の色で画面全体を塗る（横向きでセーフエリアの帯が黒く残らないように）
         .background {
@@ -145,11 +131,13 @@ public struct GameSessionView: View {
 private extension View {
     /// 対局をやめるボタン（縦向き・iPad・macOS 用）。
     @ViewBuilder
-    func quitToolbar(active: Bool, quit: @escaping () -> Void) -> some View {
+    func quitToolbar(
+        active: Bool, confirming: Binding<Bool>, quit: @escaping () -> Void
+    ) -> some View {
         if active {
             toolbar {
                 ToolbarItem(placement: KoikoiToolbar.quitPlacement) {
-                    KoikoiToolbar.quitButton(quit)
+                    KoikoiToolbar.quitButton(confirming: confirming, quit: quit)
                 }
             }
         } else {
@@ -162,7 +150,7 @@ private extension View {
     @ViewBuilder
     func landscapeChromeToolbar(
         model: GameViewModel?, active: Bool, palette: KoikoiPalette,
-        quit: @escaping () -> Void
+        confirming: Binding<Bool>, quit: @escaping () -> Void
     ) -> some View {
         #if os(iOS)
         if let model, active {
@@ -181,7 +169,7 @@ private extension View {
                 }
                 .sharedBackgroundVisibility(.hidden)
                 ToolbarItem(placement: .topBarTrailing) {
-                    KoikoiToolbar.quitButton(quit)
+                    KoikoiToolbar.quitButton(confirming: confirming, quit: quit)
                 }
             }
             // 下を流れる札は、バー自体のぼかし越しに見せる
@@ -206,10 +194,26 @@ private enum KoikoiToolbar {
         #endif
     }
 
+    /// 確認ダイアログはボタン自身に付ける（regular 幅では popover になり、
+    /// ルートに付けると吹き出しがボタンではなく画面中央から出る）。
     @MainActor
-    static func quitButton(_ quit: @escaping () -> Void) -> some View {
+    static func quitButton(
+        confirming: Binding<Bool>, quit: @escaping () -> Void
+    ) -> some View {
         Button(String(localized: "Quit Game", bundle: .module), systemImage: "xmark") {
-            quit()
+            confirming.wrappedValue = true
+        }
+        .confirmationDialog(
+            Text("Quit this game?", bundle: .module),
+            isPresented: confirming,
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Quit", bundle: .module), role: .destructive) {
+                quit()
+            }
+            Button(String(localized: "Continue", bundle: .module), role: .cancel) {}
+        } message: {
+            Text("The saved game will be deleted.", bundle: .module)
         }
     }
 
