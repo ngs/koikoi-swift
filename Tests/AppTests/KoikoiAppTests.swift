@@ -133,6 +133,29 @@ final class KoikoiAppTests: XCTestCase {
         try png.write(to: dir.appendingPathComponent(filename))
     }
 
+    /// KoikoiUI の Colors.xcassets が実際にコンパイルされ、全テーマ × 全色が引ける。
+    /// （SwiftPM の `swift test` はカタログを未コンパイルのままコピーするため、
+    /// アセットの解決はアプリのビルドを伴うこのターゲットで確認する）
+    func testEveryThemeColorResolves() {
+        let names = ["Table", "CardBack", "CardBackEdge", "Highlight", "Ink", "Badge"]
+        for theme in KoikoiTheme.allCases {
+            // system は OS 標準色なのでカタログを持たない
+            guard let folder = theme.assetFolder else { continue }
+            for name in names {
+                let assetName = "\(folder)/\(name)"
+                #if canImport(UIKit)
+                XCTAssertNotNil(
+                    UIColor(named: assetName, in: .koikoiUI, compatibleWith: nil),
+                    "missing color: \(assetName)")
+                #elseif canImport(AppKit)
+                XCTAssertNotNil(
+                    NSColor(named: NSColor.Name(assetName), bundle: .koikoiUI),
+                    "missing color: \(assetName)")
+                #endif
+            }
+        }
+    }
+
     /// アプリカタログ（Assets.xcassets/Cards）に 48 枚全ての札画像が
     /// コンパイルされている。
     func testAllCardAssetsCompiledIntoApp() {

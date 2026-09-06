@@ -15,6 +15,10 @@ struct SpatialBoardView: View {
     @State private var exporting = false
     @State private var importing = false
     @State private var board = BoardScene()
+    /// 選択中の配色（対局設定パネルのピッカーと共有する）。
+    @AppStorage(KoikoiTheme.storageKey)
+    private var themeRaw = KoikoiTheme.felt.rawValue
+    private var theme: KoikoiTheme { KoikoiTheme(rawValue: themeRaw) ?? .felt }
     private let store = GameStore.shared
 
     var body: some View {
@@ -22,9 +26,11 @@ struct SpatialBoardView: View {
             RealityView { content in
                 content.add(board.root)
                 ground(content, proxy: proxy)
+                board.apply(colors: SpatialColors(palette: KoikoiPalette(theme: theme)))
                 board.sync(model: model, animated: false)
             } update: { content in
                 ground(content, proxy: proxy)
+                board.apply(colors: SpatialColors(palette: KoikoiPalette(theme: theme)))
                 board.sync(model: model, animated: true)
             }
             .gesture(
@@ -136,6 +142,19 @@ struct SpatialBoardView: View {
 
 // MARK: - 盤面シーン
 
+/// visionOS のマテリアル色（RealityKit は SwiftUI の Color を直接扱えないため UIColor にする）。
+private struct SpatialColors: Equatable {
+    let felt: UIColor
+    let cardBack: UIColor
+    let glow: UIColor
+
+    init(palette: KoikoiPalette) {
+        felt = UIColor(palette.table)
+        cardBack = UIColor(palette.cardBack)
+        glow = UIColor(palette.highlight)
+    }
+}
+
 /// 盤面のエンティティを札 ID ごとに保持し、ビューモデルの状態へ差分同期するストア。
 /// ゾーン遷移（手札→場→獲得、山札からの出現）を分類し、1 手ずつ時間差の
 /// タイムラインに載せて move(to:) でアニメーションする。
@@ -154,6 +173,8 @@ private final class BoardScene {
     private var targets: [Int: Transform] = [:]
     /// 札ごとの予約世代。新しい予約が入ったら古い遅延実行を無効化する。
     private var generations: [Int: Int] = [:]
+    /// マテリアルの色（既定は緑羅紗。テーマ変更時に apply(colors:) で差し替える）。
+    private var colors = SpatialColors(palette: KoikoiPalette(theme: .felt))
 
     private enum Zone { case hand, field, captured, drawn }
 
@@ -167,9 +188,7 @@ private final class BoardScene {
     private static let deckZ: Float = 0.01
     private static let deckTop: SIMD3<Float> = [deckX, 0.06, deckZ]
     private static let opponentHandSpot: SIMD3<Float> = [0, 0.02, -0.17]
-    private static let feltColor = UIColor(Color(red: 0.10, green: 0.28, blue: 0.20))
-    private static let cardBackColor = UIColor(Color(red: 0.72, green: 0.18, blue: 0.15))
-    private static let glowColor = UIColor(Color(red: 1.00, green: 0.82, blue: 0.25))
+    /// マテリアルの色（選択中のテーマから作る）。
 
     /// 札 1 枚の目標配置。
     private struct Pose {
@@ -455,7 +474,7 @@ extension BoardScene {
         guard felt == nil else { return }
         let entity = ModelEntity(
             mesh: .generateBox(width: Self.feltWidth, height: 0.006, depth: Self.feltDepth),
-            materials: [SimpleMaterial(color: Self.feltColor, roughness: 1.0, isMetallic: false)])
+            materials: [SimpleMaterial(color: colors.felt, roughness: 1.0, isMetallic: false)])
         entity.name = "felt"
         entity.position = [0, -0.003, 0]
         root.addChild(entity)
@@ -490,7 +509,7 @@ extension BoardScene {
                 mesh: .generatePlane(
                     width: Self.cardWidth * 1.18, depth: Self.cardHeight * 1.12,
                     cornerRadius: 0.004),
-                materials: [UnlitMaterial(color: Self.glowColor)])
+                materials: [UnlitMaterial(color: colors.glow)])
             glow.name = "glow"
             glow.position = [0, -0.001, 0]
             entity.addChild(glow)
@@ -511,7 +530,7 @@ extension BoardScene {
         badge.name = name
         let disc = ModelEntity(
             mesh: .generateCylinder(height: 0.001, radius: 0.0085),
-            materials: [UnlitMaterial(color: Self.glowColor)])
+            materials: [UnlitMaterial(color: colors.glow)])
         badge.addChild(disc)
 
         let mesh = MeshResource.generateText(
@@ -528,6 +547,19 @@ extension BoardScene {
         entity.addChild(badge)
     }
 
+    /// テーマ変更を、すでに作られているエンティティにも反映する。
+    func apply(colors newColors: SpatialColors) {
+        guard newColors != colors else { return }
+        colors = newColors
+        let table = SimpleMaterial(color: colors.felt, roughness: 1.0, isMetallic: false)
+        let back = SimpleMaterial(color: colors.cardBack, roughness: 1.0, isMetallic: false)
+        felt?.model?.materials = [table]
+        for entity in backs {
+            entity.model?.materials = [back]
+        }
+        deck?.model?.materials = [back]
+    }
+
     /// 相手の手札（裏向きの薄い赤札）を枚数だけ並べる。
     private func syncBacks(total: Int, animated: Bool) {
         while backs.count > total {
@@ -537,7 +569,7 @@ extension BoardScene {
             let back = ModelEntity(
                 mesh: .generateBox(
                     width: Self.cardWidth, height: 0.0016, depth: Self.cardHeight),
-                materials: [SimpleMaterial(color: Self.cardBackColor, roughness: 1.0, isMetallic: false)])
+                materials: [SimpleMaterial(color: colors.cardBack, roughness: 1.0, isMetallic: false)])
             back.name = "back:\(backs.count)"
             back.components.set(GroundingShadowComponent(castsShadow: true))
             root.addChild(back)
@@ -564,7 +596,7 @@ extension BoardScene {
         let entity = ModelEntity(
             mesh: .generateBox(
                 width: Self.cardWidth + 0.002, height: height, depth: Self.cardHeight + 0.002),
-            materials: [SimpleMaterial(color: Self.cardBackColor, roughness: 1.0, isMetallic: false)])
+            materials: [SimpleMaterial(color: colors.cardBack, roughness: 1.0, isMetallic: false)])
         entity.name = "deck"
         entity.position = [Self.deckX, height / 2, Self.deckZ]
         entity.components.set(GroundingShadowComponent(castsShadow: true))

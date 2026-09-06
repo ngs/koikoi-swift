@@ -61,6 +61,9 @@ public final class GameViewModel {
 
     /// 進行中の獲得アニメーション。この間プレイヤー入力は受け付けない。
     public private(set) var captureAnimation: CaptureAnimation?
+    /// 直前の手で場から取られた札の ID。
+    /// 消えていく札を隣の場札より前面に描くために使う（次の手で空になる）。
+    public private(set) var lastCapturedIDs: Set<Int> = []
     private let captureAnimationsEnabled: Bool
 
     public let difficulty: Difficulty
@@ -293,6 +296,8 @@ public final class GameViewModel {
             withAnimation(.easeInOut(duration: 0.3)) {
                 self.captureAnimation = nil
                 self.apply(move)
+                // 場から消える 2 枚は、詰め直される隣の札より前面に描く
+                self.lastCapturedIDs = [moving.id, target.id]
             }
         }
     }
@@ -423,6 +428,7 @@ public final class GameViewModel {
     // MARK: - 進行
 
     private func apply(_ move: Move) {
+        lastCapturedIDs = []
         simulator.apply(move)
         noteApplied(move)
         syncAfterMutation()
@@ -472,8 +478,11 @@ public final class GameViewModel {
             let move = await computeOpponentMove()
             // 探索の await 中にキャンセル・置き換えされた可能性があるため再確認する
             guard !Task.isCancelled, let move, simulator.seatToMove == .opponent else { return }
+            let fieldBefore = Set(game.field.map(\.id))
             withAnimation(.easeInOut(duration: 0.3)) {
                 simulator.apply(move)
+                // 場から消える札は、詰め直される隣の札より前面に描く
+                lastCapturedIDs = fieldBefore.subtracting(game.field.map(\.id))
             }
             noteApplied(move)
 

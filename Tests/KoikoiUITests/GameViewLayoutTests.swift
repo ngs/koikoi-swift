@@ -95,6 +95,16 @@ import Testing
         #expect(width * 8 + spacing * 7 <= GameView.landscapeSideColumnWidth)
     }
 
+    /// 側方カラム（120pt）には獲得札サムネイルが 1 行 3 枚だけ入る。
+    @Test func capturedThumbnailsWrapAtThreePerRow() {
+        #expect(GameView.capturedColumns(forWidth: GameView.landscapeSideColumnWidth) == 3)
+        let thumbnail = GameView.landscapeCapturedThumbnail
+        let spacing = GameView.landscapeCapturedSpacing
+        // 3 枚は収まり、4 枚目は入らない
+        #expect(thumbnail * 3 + spacing * 2 <= GameView.landscapeSideColumnWidth)
+        #expect(thumbnail * 4 + spacing * 3 > GameView.landscapeSideColumnWidth)
+    }
+
     /// 左右の列を除いた中央カラムの幅。
     private func centerWidth(forBoardWidth width: CGFloat) -> CGFloat {
         width - GameView.boardPadding * 2

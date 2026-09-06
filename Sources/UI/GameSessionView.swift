@@ -12,6 +12,10 @@ public struct GameSessionView: View {
     @State private var didRestore = false
     @Environment(\.scenePhase)
     private var scenePhase
+    /// 選択中の配色（設定画面のピッカーと共有する）。
+    @AppStorage(KoikoiTheme.storageKey)
+    private var themeRaw = KoikoiTheme.felt.rawValue
+    private var theme: KoikoiTheme { KoikoiTheme(rawValue: themeRaw) ?? .felt }
     #if os(iOS)
     @Environment(\.verticalSizeClass)
     private var verticalSizeClass
@@ -44,6 +48,7 @@ public struct GameSessionView: View {
                     Text("The saved game will be deleted.", bundle: .module)
                 }
         }
+        .koikoiTheme(theme)
         .onAppear {
             GameCenterService.shared.authenticate()
             guard !didRestore else { return }

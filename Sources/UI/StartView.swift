@@ -5,10 +5,42 @@ import SwiftUI
 public struct GameSetupView: View {
     @State private var rounds = 12
     @State private var difficulty: Difficulty = .normal
+    /// 盤面の配色（対局画面と `@AppStorage` で共有する）。
+    @AppStorage(KoikoiTheme.storageKey)
+    private var themeRaw = KoikoiTheme.felt.rawValue
+    private var theme: KoikoiTheme { KoikoiTheme(rawValue: themeRaw) ?? .felt }
     private let onStart: (Int, Difficulty) -> Void
 
     public init(onStart: @escaping (Int, Difficulty) -> Void) {
         self.onStart = onStart
+    }
+
+    /// 選択中の配色のミニチュア（卓・裏札・強調枠・得点タイル）。
+    private var themePreview: some View {
+        let palette = KoikoiPalette(theme: theme)
+        return RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(palette.table)
+            .frame(height: 72)
+            .overlay {
+                HStack(spacing: 12) {
+                    CardBack()
+                        .frame(width: 34)
+                    CardImage(Card.all[0])
+                        .frame(width: 34)
+                        .overlay {
+                            CardShape()
+                                .stroke(palette.highlight, lineWidth: 3)
+                        }
+                    PunchedBadge(
+                        text: "0",
+                        font: .title3.bold().monospacedDigit(),
+                        verticalPadding: 4,
+                        cornerRadius: 8,
+                        minWidth: 44)
+                }
+            }
+            .koikoiTheme(theme)
+            .animation(.default, value: themeRaw)
     }
 
     public var body: some View {
@@ -39,6 +71,17 @@ public struct GameSetupView: View {
                     Text("Difficulty", bundle: .module)
                 }
                 .pickerStyle(.segmented)
+
+                Picker(selection: $themeRaw) {
+                    ForEach(KoikoiTheme.allCases) { theme in
+                        Text(verbatim: theme.localizedName).tag(theme.rawValue)
+                    }
+                } label: {
+                    Text("Theme", bundle: .module)
+                }
+                .pickerStyle(.segmented)
+
+                themePreview
             }
             .frame(maxWidth: 420)
 

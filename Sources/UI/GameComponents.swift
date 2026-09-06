@@ -3,11 +3,6 @@ import KoikoiCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-extension Color {
-    /// 盤面の背景色（テーブルグリーン）。
-    static let koikoiTable = Color(red: 0.10, green: 0.28, blue: 0.20)
-}
-
 extension View {
     /// visionOS では z 方向に浮かせる（他プラットフォームでは何もしない）。
     @ViewBuilder
@@ -31,7 +26,11 @@ struct ConditionalFixedSize: ViewModifier {
 
 /// 白地から文字を切り抜いたバッジ（背景が文字の形に透ける）。
 struct PunchedBadge: View {
+    @Environment(\.koikoiPalette)
+    private var palette
     let text: String
+    /// 狭い列では語の切れ目で折り返す（既定は 1 行）。
+    var wraps = false
     var font: Font = .caption2.bold()
     var horizontalPadding: CGFloat = 6
     var verticalPadding: CGFloat = 2
@@ -39,21 +38,27 @@ struct PunchedBadge: View {
     var minWidth: CGFloat?
 
     var body: some View {
-        Text(text)
-            .font(font)
+        label
             .foregroundStyle(.clear)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
             .frame(minWidth: minWidth)
             .background(
-                .white.opacity(0.7),
+                palette.ink.opacity(0.7),
                 in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
-                Text(text)
-                    .font(font)
+                label
                     .blendMode(.destinationOut)
             }
             .compositingGroup()
+    }
+
+    /// 切り抜き前後で同じ組版になるよう、文字は 1 箇所で組む。
+    private var label: some View {
+        Text(text)
+            .font(font)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: wraps)
     }
 }
 
@@ -74,6 +79,8 @@ struct CardDragPayload: Codable, Transferable, Sendable {
 /// 札の裏面（赤札 + ドロップシャドウ）。
 /// スタック表示では個別の影が重なって黒ずむため `shadowed: false` で消せる。
 struct CardBack: View {
+    @Environment(\.koikoiPalette)
+    private var palette
     private let shadowed: Bool
 
     init(shadowed: Bool = true) {
@@ -82,11 +89,11 @@ struct CardBack: View {
 
     var body: some View {
         CardShape()
-            .fill(Color(red: 0.72, green: 0.18, blue: 0.15))
+            .fill(palette.cardBack)
             // 暗い縁取りで、重ねたときも 1 枚ずつの境界が見えるようにする
             .overlay {
                 CardShape()
-                    .stroke(Color(red: 0.35, green: 0.05, blue: 0.04), lineWidth: 1)
+                    .stroke(palette.cardBackEdge, lineWidth: 1)
                     .padding(0.5)
             }
             .aspectRatio(Card.aspectRatio, contentMode: .fit)
@@ -97,17 +104,25 @@ struct CardBack: View {
 /// 獲得札の詳細（go-koikoi の writeCapturedDetail 相当）。
 /// 種類別のグループ（枚数付き）で並べ、必要ならリーチも示す。
 struct CapturedDetail: View {
+    @Environment(\.koikoiPalette)
+    private var palette
     let cards: [Card]
     let reaches: [YakuReach]
     let cardWidth: CGFloat
     /// 並べる向き。横向き iPhone の左右カラムでは縦に積む（横スクロールは使えない）。
     let axis: Axis
+    /// 縦積みのときの 1 行あたりの枚数（列の幅から決め打ちする）。
+    let columns: Int
 
-    init(cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat, axis: Axis = .horizontal) {
+    init(
+        cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat,
+        axis: Axis = .horizontal, columns: Int = 3
+    ) {
         self.cards = cards
         self.reaches = reaches
         self.cardWidth = cardWidth
         self.axis = axis
+        self.columns = columns
     }
 
     private struct Group: Identifiable {
@@ -174,10 +189,13 @@ struct CapturedDetail: View {
                     VStack(alignment: .leading, spacing: 1) {
                         label(for: group, count: members.count)
                         LazyVGrid(
-                            columns: [
-                                GridItem(
-                                    .adaptive(minimum: cardWidth, maximum: cardWidth), spacing: 2)
-                            ],
+                            // 列数は幅から決め打ちする（提案幅に依存させると
+                            // 兄弟ビューが広がったときに 1 行の枚数まで増えてしまう）
+                            columns: Array(
+                                repeating: GridItem(
+                                    .fixed(cardWidth), spacing: 2, alignment: .leading),
+                                count: columns),
+                            alignment: .leading,
                             spacing: 2
                         ) {
                             ForEach(members) { card in
@@ -185,10 +203,15 @@ struct CapturedDetail: View {
                                     .frame(width: cardWidth, height: cardWidth / Card.aspectRatio)
                             }
                         }
+                        // 列の幅より広がらない（獲得札が増えても中央にはみ出さない）
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // 追加時にグリッドが滑るとゴーストのサムネイルが残るため、その場で差し込む
+        .animation(nil, value: cards)
     }
 
     private func members(of group: Group) -> [Card] {
@@ -198,13 +221,13 @@ struct CapturedDetail: View {
     private func label(for group: Group, count: Int) -> some View {
         HStack(spacing: 4) {
             Text(verbatim: group.label)
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(palette.ink.opacity(0.85))
             Text("\(count)")
                 .font(.caption2.bold().monospacedDigit())
                 .padding(.horizontal, 5)
                 .padding(.vertical, 1)
-                .background(.white.opacity(0.18), in: Capsule())
-                .foregroundStyle(.white)
+                .background(palette.ink.opacity(0.18), in: Capsule())
+                .foregroundStyle(palette.ink)
         }
         .font(.caption2)
     }
@@ -212,6 +235,8 @@ struct CapturedDetail: View {
 
 /// リーチ一覧のパネル（タイトル + 役名バッジ + 不足札名）。
 struct ReachList: View {
+    @Environment(\.koikoiPalette)
+    private var palette
     let reaches: [YakuReach]
     /// 狭い列に置くとき、不足札名を折り返して幅に収める。
     var wraps: Bool = false
@@ -221,26 +246,40 @@ struct ReachList: View {
             Text("One Away", bundle: .module)
                 .font(.caption.bold())
             Rectangle()
-                .fill(.white.opacity(0.35))
+                .fill(palette.ink.opacity(0.35))
                 .frame(height: 1)
-            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 5) {
-                ForEach(reaches, id: \.self) { reach in
-                    GridRow {
-                        PunchedBadge(text: reach.kind.localizedName)
-                            .fixedSize()  // 「雨四光」等を折り返させない
-                            .gridColumnAlignment(.trailing)
-                        Text(verbatim: missingText(for: reach))
-                            .font(.caption)
-                            .fixedSize(horizontal: false, vertical: wraps)
+            if wraps {
+                // 狭い列では 2 列グリッドだと不足札名が 1 文字ずつ折り返すため縦に積む
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(reaches, id: \.self) { reach in
+                        VStack(alignment: .leading, spacing: 2) {
+                            PunchedBadge(text: reach.kind.localizedName, wraps: true)
+                            Text(verbatim: missingText(for: reach))
+                                .font(.caption)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            } else {
+                Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 5) {
+                    ForEach(reaches, id: \.self) { reach in
+                        GridRow {
+                            PunchedBadge(text: reach.kind.localizedName)
+                                .fixedSize()  // 「雨四光」等を折り返させない
+                                .gridColumnAlignment(.trailing)
+                            Text(verbatim: missingText(for: reach))
+                                .font(.caption)
+                        }
                     }
                 }
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(palette.ink)
         .padding(10)
+        .frame(maxWidth: wraps ? .infinity : nil, alignment: .leading)
         .overlay {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(.white.opacity(0.45), lineWidth: 1.5)
+                .stroke(palette.ink.opacity(0.45), lineWidth: 1.5)
         }
         .modifier(ConditionalFixedSize(enabled: !wraps))
     }
@@ -261,6 +300,8 @@ struct ScoreboardPanel: View {
         case strip
     }
 
+    @Environment(\.koikoiPalette)
+    private var palette
     let monthName: String
     let round: Int
     let maxRounds: Int
@@ -270,12 +311,12 @@ struct ScoreboardPanel: View {
 
     var body: some View {
         content
-            .foregroundStyle(.white)
+            .foregroundStyle(palette.ink)
             .padding(.horizontal, style == .strip ? 8 : 10)
             .padding(.vertical, style == .strip ? 6 : 10)
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(.white.opacity(0.45), lineWidth: 1.5)
+                    .stroke(palette.ink.opacity(0.45), lineWidth: 1.5)
             }
             .fixedSize()
     }
@@ -291,7 +332,7 @@ struct ScoreboardPanel: View {
                     roundBadge
                 }
                 Rectangle()
-                    .fill(.white.opacity(0.35))
+                    .fill(palette.ink.opacity(0.35))
                     .frame(height: 1)
                 HStack(spacing: 10) {
                     scoreTile(score: playerScore, label: String(localized: "You", bundle: .module))
@@ -306,7 +347,7 @@ struct ScoreboardPanel: View {
                     .font(.headline)
                 roundBadge
                 Rectangle()
-                    .fill(.white.opacity(0.35))
+                    .fill(palette.ink.opacity(0.35))
                     .frame(width: 1, height: 18)
                 inlineScore(score: playerScore, label: String(localized: "You", bundle: .module))
                 inlineScore(
@@ -368,39 +409,63 @@ struct GameScoreboard: View {
 
 /// 成立中の役のバッジ列（役名 + 文数チップ。文字での説明は最小限に）。
 struct YakuBadges: View {
+    @Environment(\.koikoiPalette)
+    private var palette
     let yakus: [Yaku]
+    /// 狭い列では 1 行 1 バッジに積み、役名を語の切れ目で折り返す。
+    var stacked = false
 
     var body: some View {
         if !yakus.isEmpty {
-            HStack(spacing: 6) {
-                ForEach(yakus, id: \.self) { yaku in
-                    HStack(spacing: 5) {
-                        Text(verbatim: yaku.kind.localizedName)
-                        Text("\(yaku.points)")
-                            .font(.caption2.bold().monospacedDigit())
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(.white.opacity(0.25), in: Capsule())
+            if stacked {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(yakus, id: \.self) { yaku in
+                        badge(yaku)
                     }
-                    .font(.caption2.bold())
-                    .padding(.leading, 7)
-                    .padding(.trailing, 4)
-                    .padding(.vertical, 2)
-                    .background(.red.opacity(0.85), in: Capsule())
-                    .foregroundStyle(.white)
+                }
+            } else {
+                HStack(spacing: 6) {
+                    ForEach(yakus, id: \.self) { yaku in
+                        badge(yaku)
+                    }
                 }
             }
         }
+    }
+
+    private func badge(_ yaku: Yaku) -> some View {
+        // 文数チップは折り返した役名の 1 行目に揃える
+        HStack(alignment: .top, spacing: 5) {
+            Text(verbatim: yaku.kind.localizedName)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: stacked)
+            Text("\(yaku.points)")
+                .font(.caption2.bold().monospacedDigit())
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(palette.ink.opacity(0.25), in: Capsule())
+        }
+        .font(.caption2.bold())
+        .padding(.leading, 7)
+        .padding(.trailing, 4)
+        .padding(.vertical, 2)
+        // 折り返して複数行になっても左右が丸まりすぎないよう、四隅の角丸にする
+        .background(
+            palette.badge.opacity(0.85),
+            in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .foregroundStyle(palette.ink)
     }
 }
 
 /// 明滅する強調枠（選択候補のハイライト用）。
 struct PulsingRing: View {
+    @Environment(\.koikoiPalette)
+    private var palette
     @State private var pulsing = false
 
     var body: some View {
         CardShape()
-            .stroke(.yellow, lineWidth: 3)
+            .stroke(palette.highlight, lineWidth: 3)
             .opacity(pulsing ? 1.0 : 0.35)
             .onAppear {
                 withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
@@ -413,6 +478,8 @@ struct PulsingRing: View {
 /// 裏返しの札を残り枚数分重ねた山札。
 /// 1 枚ごとに縁をずらして重ねるため、残量が高さで視覚的に分かる。
 struct DeckStack: View {
+    @Environment(\.koikoiPalette)
+    private var palette
     let remaining: Int
     var cardWidth: CGFloat = 40
     /// 札の高さは縦の提案に委ねず比率から確定させる。
@@ -441,7 +508,7 @@ struct DeckStack: View {
             .animation(.default, value: remaining)
         } else {
             CardShape()
-                .stroke(.white.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [5]))
+                .stroke(palette.ink.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [5]))
                 .frame(width: cardWidth, height: cardHeight)
         }
     }
@@ -452,6 +519,8 @@ struct DeckStack: View {
 /// - focused: キーカーソル位置（白枠・太）
 /// - dimmed: 場札選択中の候補外（減光）
 struct FieldCardView: View {
+    @Environment(\.koikoiPalette)
+    private var palette
     let card: Card
     let highlighted: Bool
     let focused: Bool
@@ -470,7 +539,7 @@ struct FieldCardView: View {
                     }
                     if focused {
                         CardShape()
-                            .stroke(.white, lineWidth: 3)
+                            .stroke(palette.ink, lineWidth: 3)
                             .padding(-3)
                     }
                 }
@@ -483,6 +552,8 @@ struct FieldCardView: View {
 
 /// 手札 1 枚（マッチ枚数バッジ・カーソル/選択枠・ドラッグ対応）。
 struct HandCardView: View {
+    @Environment(\.koikoiPalette)
+    private var palette
     let card: Card
     let matchCount: Int
     let selected: Bool
@@ -500,7 +571,7 @@ struct HandCardView: View {
                     }
                     if focused {
                         CardShape()
-                            .stroke(.white, lineWidth: 3)
+                            .stroke(palette.ink, lineWidth: 3)
                             .padding(-3)
                     }
                 }
@@ -508,9 +579,9 @@ struct HandCardView: View {
                     if matchCount > 0 {
                         Text("\(matchCount)")
                             .font(.caption2.bold())
-                            .foregroundStyle(.black)
+                            .foregroundStyle(palette.badgeText)
                             .padding(4)
-                            .background(.yellow, in: Circle())
+                            .background(palette.highlight, in: Circle())
                             .padding(3)  // 札の内側に収める（隣の札に隠れない）
                     }
                 }

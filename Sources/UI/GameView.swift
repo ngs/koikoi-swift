@@ -18,6 +18,8 @@ public struct GameView: View {
         return GCKeyboard.coalesced != nil
         #endif
     }
+    @Environment(\.koikoiPalette)
+    private var palette
     /// 札の獲得アニメーション用（ゾーン間の移動を matchedGeometryEffect で結ぶ）。
     @Namespace private var cardSpace
     private let onExit: (() -> Void)?
@@ -53,6 +55,18 @@ public struct GameView: View {
     /// 横向きの相手裏札の幅と重ね幅（8 枚が側方カラム 120pt に収まる大きさ）。
     static let landscapeOpponentBackWidth: CGFloat = 20
     static let landscapeOpponentBackSpacing: CGFloat = -7
+    /// 側方カラムに並べる獲得札サムネイルの幅と、その間隔。
+    static let landscapeCapturedThumbnail: CGFloat = 30
+    static let landscapeCapturedSpacing: CGFloat = 2
+
+    /// 与えた幅に収まるサムネイルの列数（LazyVGrid の adaptive と同じ数え方）。
+    static func capturedColumns(
+        forWidth width: CGFloat,
+        thumbnail: CGFloat = landscapeCapturedThumbnail,
+        spacing: CGFloat = landscapeCapturedSpacing
+    ) -> Int {
+        max(Int(floor((width + spacing) / (thumbnail + spacing))), 1)
+    }
 
     /// グリッドのスペーシング（compact 幅では詰めて 8 枚を 1 行に収める）。
     static func gridSpacing(compact: Bool) -> CGFloat {
@@ -169,7 +183,7 @@ public struct GameView: View {
             // visionOS はウィンドウのガラスをそのまま透過させる（緑ベタは敷かない）
             Color.clear
             #else
-            Color.koikoiTable
+            palette.table
                 .ignoresSafeArea()
             #endif
             if isLandscapePhone {
@@ -200,10 +214,14 @@ public struct GameView: View {
             // 他の花札ゲームやスコアボードの並び（You | Opponent）に合わせ、自分を左に置く
             landscapePlayerColumn()
                 .frame(width: Self.landscapeSideColumnWidth, alignment: .leading)
+                .clipped()
             landscapeCenterColumn(tile: tile)
                 .frame(maxWidth: .infinity)
+                // 中央で動く札が側方カラムに隠れないようにする
+                .zIndex(1)
             landscapeOpponentColumn()
                 .frame(width: Self.landscapeSideColumnWidth, alignment: .leading)
+                .clipped()
         }
         .padding(Self.boardPadding)
         // 列の中身が伸びても盤面の高さを超えない（手札が画面外に押し出されるのを防ぐ）
@@ -229,9 +247,11 @@ public struct GameView: View {
                     }
                     .compositingGroup()
                     .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
-                    YakuBadges(yakus: model.opponentYaku)
+                    YakuBadges(yakus: model.opponentYaku, stacked: true)
                     CapturedDetail(
-                        cards: model.game.captured(for: .opponent), cardWidth: 30, axis: .vertical)
+                        cards: model.game.captured(for: .opponent),
+                        cardWidth: Self.landscapeCapturedThumbnail, axis: .vertical,
+                        columns: Self.capturedColumns(forWidth: Self.landscapeSideColumnWidth))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -242,7 +262,7 @@ public struct GameView: View {
     private func columnHeader(_ title: Text) -> some View {
         title
             .font(.title3.bold())
-            .foregroundStyle(.white)
+            .foregroundStyle(palette.ink)
     }
 
     private func landscapeCenterColumn(tile: CGFloat) -> some View {
@@ -273,9 +293,11 @@ public struct GameView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 6) {
                 columnHeader(Text("You", bundle: .module))
-                YakuBadges(yakus: model.playerYaku)
+                YakuBadges(yakus: model.playerYaku, stacked: true)
                 CapturedDetail(
-                    cards: model.game.captured(for: .player), cardWidth: 30, axis: .vertical)
+                    cards: model.game.captured(for: .player),
+                    cardWidth: Self.landscapeCapturedThumbnail, axis: .vertical,
+                    columns: Self.capturedColumns(forWidth: Self.landscapeSideColumnWidth))
                 if !model.playerReaches.isEmpty {
                     ReachList(reaches: model.playerReaches, wraps: true)
                 }
@@ -402,7 +424,13 @@ public struct GameView: View {
                             }
                         }
                     }
-                    .zIndex(model.captureAnimation?.target == card ? 1 : 0)
+                    // 移動中・獲得直後の札は、詰め直される隣の札より前面に置く
+                    // （消える札が隣にかぶられて「下をくぐる」ように見えるのを防ぐ）
+                    .zIndex(raisesAboveField(card) ? 1 : 0)
+                    .transition(
+                        .asymmetric(
+                            insertion: .identity,
+                            removal: .opacity.combined(with: .scale(scale: 0.9))))
                 }
             }
             .background {
@@ -412,6 +440,14 @@ public struct GameView: View {
         }
     }
 
+    /// この場札を隣より前面に描くか（移動中・対象・直前に取られた札）。
+    private func raisesAboveField(_ card: Card) -> Bool {
+        if let animation = model.captureAnimation {
+            if animation.target == card || animation.movingCard == card { return true }
+        }
+        return model.lastCapturedIDs.contains(card.id)
+    }
+
     /// 山札から引いた札のプレビュー。
     @ViewBuilder
     private func drawnPreview(tile: CGFloat) -> some View {
@@ -419,7 +455,7 @@ public struct GameView: View {
             HStack(spacing: 4) {
                 Text("Drawn:", bundle: .module)
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(palette.ink.opacity(0.8))
                 CardImage(drawn)
                     .frame(width: capturedWidth(tile: tile))
                     .matchedGeometryEffect(id: drawn.id, in: cardSpace)
@@ -441,7 +477,7 @@ public struct GameView: View {
             }
         }
         .font(.caption)
-        .foregroundStyle(.yellow)
+        .foregroundStyle(palette.highlight)
     }
 
     private func playerArea(tile: CGFloat) -> some View {
@@ -562,7 +598,7 @@ public struct GameView: View {
     /// ダイアログのキーボードカーソル。キーボード非接続時（iPhone のタッチ操作）は描かない。
     private func dialogFocusRing(when selected: Bool) -> some View {
         RoundedRectangle(cornerRadius: 8)
-            .stroke(.yellow, lineWidth: selected && hasKeyboard ? 3 : 0)
+            .stroke(palette.highlight, lineWidth: selected && hasKeyboard ? 3 : 0)
             .padding(-3)
     }
 
