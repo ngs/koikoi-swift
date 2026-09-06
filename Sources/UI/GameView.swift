@@ -1,3 +1,4 @@
+import GameController
 import KoikoiAI
 import KoikoiCore
 import SwiftUI
@@ -7,6 +8,16 @@ import SwiftUI
 public struct GameView: View {
     @State private var model: GameViewModel
     @FocusState private var boardFocused: Bool
+    /// ハードウェアキーボードの有無。キーボードカーソルの枠はキーボードがある時だけ描く。
+    /// macOS は常にキーボードがあるものとし、iOS / visionOS は GCKeyboard の接続で判定する。
+    @State private var hasKeyboard = Self.keyboardIsConnected
+    private static var keyboardIsConnected: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return GCKeyboard.coalesced != nil
+        #endif
+    }
     /// 札の獲得アニメーション用（ゾーン間の移動を matchedGeometryEffect で結ぶ）。
     @Namespace private var cardSpace
     private let onExit: (() -> Void)?
@@ -98,6 +109,12 @@ public struct GameView: View {
         .focusEffectDisabled()
         .focused($boardFocused)
         .onAppear { boardFocused = true }
+        .onReceive(NotificationCenter.default.publisher(for: .GCKeyboardDidConnect)) { _ in
+            hasKeyboard = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .GCKeyboardDidDisconnect)) { _ in
+            hasKeyboard = Self.keyboardIsConnected
+        }
         .onKeyPress(.leftArrow) { move(.left) }
         .onKeyPress(.rightArrow) { move(.right) }
         .onKeyPress(.upArrow) { move(.up) }
@@ -392,9 +409,10 @@ public struct GameView: View {
         }
     }
 
+    /// ダイアログのキーボードカーソル。キーボード非接続時（iPhone のタッチ操作）は描かない。
     private func dialogFocusRing(when selected: Bool) -> some View {
         RoundedRectangle(cornerRadius: 8)
-            .stroke(.yellow, lineWidth: selected ? 3 : 0)
+            .stroke(.yellow, lineWidth: selected && hasKeyboard ? 3 : 0)
             .padding(-3)
     }
 
