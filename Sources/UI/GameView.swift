@@ -572,7 +572,7 @@ public struct GameView: View {
             case .opponentTurn:
                 Text("Opponent's turn…", bundle: .module)
             case .decideKoikoi, .roundEnd, .matchEnd:
-                Text("")
+                EmptyView()
             }
         }
         .font(.caption)

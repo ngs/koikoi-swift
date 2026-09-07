@@ -1,50 +1,50 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "Brights": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "光"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Animals" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タネ"
           }
         }
       }
     },
-    "Ribbons": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "短"
+    "Brights" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "光"
           }
         }
       }
     },
-    "Animals": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "タネ"
+    "Chaff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カス"
           }
         }
       }
     },
-    "Chaff": {
-      "extractionState": "manual",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カス"
+    "Ribbons" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "短"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

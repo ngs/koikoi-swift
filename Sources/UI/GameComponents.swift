@@ -222,7 +222,7 @@ struct CapturedDetail: View {
         HStack(spacing: 4) {
             Text(verbatim: group.label)
                 .foregroundStyle(palette.ink.opacity(0.85))
-            Text("\(count)")
+            Text(verbatim: String(count))
                 .font(.caption2.bold().monospacedDigit())
                 .padding(.horizontal, 5)
                 .padding(.vertical, 1)
