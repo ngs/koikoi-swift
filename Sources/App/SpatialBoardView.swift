@@ -18,7 +18,7 @@ struct SpatialBoardView: View {
     /// 選択中の配色（対局設定パネルのピッカーと共有する）。
     @AppStorage(KoikoiTheme.storageKey)
     private var themeRaw = KoikoiTheme.felt.rawValue
-    private var theme: KoikoiTheme { KoikoiTheme(rawValue: themeRaw) ?? .felt }
+    private var theme: KoikoiTheme { KoikoiDebugLaunch.theme(themeRaw) }
     /// フェルトを透かすか（対局設定パネルのトグルと共有する）。
     @AppStorage(KoikoiAppearance.translucencyStorageKey)
     private var translucentWindow = KoikoiAppearance.defaultTranslucency
@@ -61,7 +61,10 @@ struct SpatialBoardView: View {
         .onAppear {
             GameCenterService.shared.authenticate()
             // 起動時は保存済みの対局をそのまま復元する
-            if model == nil, let saved = store.load() {
+            // （デバッグ用の局面が指定されていればそちらを優先し、保存はしない）
+            if model == nil, let fixture = KoikoiDebugLaunch.fixture() {
+                start(record: fixture, persists: false)
+            } else if model == nil, let saved = store.load() {
                 start(record: saved)
             }
         }
@@ -101,11 +104,17 @@ struct SpatialBoardView: View {
         .glassBackgroundEffect()
     }
 
-    private func start(record: GameRecord) {
+    /// - Parameter persists: 指し手を保存へ書き戻すか
+    ///   （デバッグ用の差し替え局面では書かない）。
+    private func start(record: GameRecord, persists: Bool = true) {
         moves = record.moves
-        store.save(record)
         // 2D 用の獲得アニメ演出（適用前ディレイ）は使わず、3D 側のタイムラインで表現する
         let model = GameViewModel(record: record, captureAnimationsEnabled: false)
+        guard persists else {
+            self.model = model
+            return
+        }
+        store.save(record)
         model.onMoveApplied = { move in
             moves.append(move)
             store.save(

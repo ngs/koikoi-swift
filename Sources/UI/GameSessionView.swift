@@ -19,16 +19,13 @@ public struct GameSessionView: View {
     /// 選択中の配色（設定画面のピッカーと共有する）。
     @AppStorage(KoikoiTheme.storageKey)
     private var themeRaw = KoikoiTheme.felt.rawValue
-    private var theme: KoikoiTheme { KoikoiTheme(rawValue: themeRaw) ?? .felt }
+    private var theme: KoikoiTheme { KoikoiDebugLaunch.theme(themeRaw) }
     /// 背景を透過するか（対局設定画面のトグルと共有する）。
     @AppStorage(KoikoiAppearance.translucencyStorageKey)
     private var translucentWindow = KoikoiAppearance.defaultTranslucency
     /// 盤面が三列レイアウトか（GameView から通知される）。
     /// 三列のときはスコアボードと陣営の見出しをツールバーに載せる。
     @State private var wideBoard = false
-
-    /// デバッグ用の対局数上書きキー（起動引数 `-KoikoiDebugRounds <n>`）。
-    static let debugRoundsKey = "KoikoiDebugRounds"
 
     public init(store: GameStore = .shared) {
         self.store = store
@@ -59,7 +56,9 @@ public struct GameSessionView: View {
             GameCenterService.shared.setAccessPointVisible(model == nil)
             guard !didRestore else { return }
             didRestore = true
-            if let saved = store.load() {
+            if let fixture = KoikoiDebugLaunch.fixture() {
+                start(record: fixture, persists: false)
+            } else if let saved = store.load() {
                 start(record: saved)
             }
         }
@@ -82,7 +81,7 @@ public struct GameSessionView: View {
         } else {
             GameSetupView { rounds, difficulty in
                 let record = GameRecord(
-                    rounds: Self.resolvedRounds(rounds),
+                    rounds: KoikoiDebugLaunch.rounds(rounds),
                     difficulty: difficulty,
                     seed: UInt64.random(in: .min ... .max))
                 store.save(record)
@@ -108,19 +107,14 @@ public struct GameSessionView: View {
         #endif
     }
 
-    /// デバッグ時のみ、起動引数 `-KoikoiDebugRounds <n>` で対局数を上書きする
-    /// （終了フローの動作確認用。Release ビルドには含めない）。
-    static func resolvedRounds(
-        _ rounds: Int, defaults: UserDefaults = .standard
-    ) -> Int {
-        #if DEBUG
-        let override = defaults.integer(forKey: Self.debugRoundsKey)
-        if override >= 1 { return override }
-        #endif
-        return rounds
-    }
-
-    private func start(record: GameRecord) {
+    /// - Parameter persists: 指し手を保存へ書き戻すか
+    ///   （デバッグ用の差し替え局面では書かない）。
+    private func start(record: GameRecord, persists: Bool = true) {
+        guard persists else {
+            self.record = nil
+            model = GameViewModel(record: record)
+            return
+        }
         self.record = record
         let model = GameViewModel(record: record)
         model.onMoveApplied = { move in
