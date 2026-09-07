@@ -73,6 +73,22 @@ platform :ios do
       skip_json_file_saving: true
     )
   end
+
+  desc 'Upload App Store screenshots from fastlane/screenshots/ios'
+  lane :deliver_screenshots do
+    setup_app_store_connect_api_key
+    deliver(
+      platform: 'ios',
+      force: true,
+      skip_metadata: true,
+      skip_binary_upload: true,
+      skip_app_version_update: true,
+      run_precheck_before_submit: false,
+      overwrite_screenshots: true,
+      screenshots_path: './fastlane/screenshots/ios',
+      app_identifier: 'io.ngs.Koikoi'
+    )
+  end
 end
 
 platform :mac do
@@ -161,6 +177,22 @@ platform :mac do
       app_identifier: 'io.ngs.Koikoi'
     )
   end
+
+  desc 'Upload App Store screenshots from fastlane/screenshots/mac'
+  lane :deliver_screenshots do
+    setup_app_store_connect_api_key
+    deliver(
+      platform: 'osx',
+      force: true,
+      skip_metadata: true,
+      skip_binary_upload: true,
+      skip_app_version_update: true,
+      run_precheck_before_submit: false,
+      overwrite_screenshots: true,
+      screenshots_path: './fastlane/screenshots/mac',
+      app_identifier: 'io.ngs.Koikoi'
+    )
+  end
 end
 
 platform :visionos do
@@ -205,6 +237,22 @@ platform :visionos do
     pilot(
       skip_waiting_for_build_processing: true,
       ipa: './build/release/visionos/Koikoi-visionOS.ipa'
+    )
+  end
+
+  desc 'Upload App Store screenshots from fastlane/screenshots/visionos'
+  lane :deliver_screenshots do
+    setup_app_store_connect_api_key
+    deliver(
+      platform: 'xros',
+      force: true,
+      skip_metadata: true,
+      skip_binary_upload: true,
+      skip_app_version_update: true,
+      run_precheck_before_submit: false,
+      overwrite_screenshots: true,
+      screenshots_path: './fastlane/screenshots/visionos',
+      app_identifier: 'io.ngs.Koikoi'
     )
   end
 end

@@ -1,0 +1,89 @@
+name: Upload App Store Screenshots
+
+on:
+  # Screenshots committed to master are pushed to App Store Connect with deliver.
+  push:
+    branches: [master]
+    paths:
+      - "fastlane/screenshots/**"
+      - "fastlane/Fastfile"
+      - ".github/workflows/screenshots.yml"
+
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Platform whose screenshots to upload"
+        required: true
+        type: choice
+        options:
+          - all
+          - ios
+          - mac
+          - visionos
+        default: all
+
+permissions:
+  contents: read
+
+env:
+  FASTLANE_SKIP_UPDATE_CHECK: "1"
+  APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY_ID }}
+  APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+  APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY }}
+  APP_STORE_CONNECT_API_KEY_IS_KEY_CONTENT_BASE64: "true"
+
+jobs:
+  determine-platforms:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          platform="${{ github.event.inputs.platform || 'all' }}"
+          if [[ "$platform" == "all" ]]; then
+            echo 'matrix=["ios","mac","visionos"]' >> "$GITHUB_OUTPUT"
+          else
+            echo "matrix=[\"$platform\"]" >> "$GITHUB_OUTPUT"
+          fi
+
+  upload:
+    needs: determine-platforms
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJson(needs.determine-platforms.outputs.matrix) }}
+    # One upload per platform at a time so reruns never race against each other.
+    concurrency:
+      group: screenshots-${{ matrix.platform }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Check for screenshots
+        id: check
+        run: |
+          count=$(find "fastlane/screenshots/${{ matrix.platform }}" -name '*.png' 2>/dev/null | wc -l)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "${{ matrix.platform }}: $count screenshot(s)"
+
+      - name: Setup Ruby
+        if: steps.check.outputs.count != '0'
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Upload screenshots with deliver
+        if: steps.check.outputs.count != '0'
+        run: bundle exec fastlane ${{ matrix.platform }} deliver_screenshots
+
+      - name: Upload fastlane report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.platform }}-${{ github.sha }}
+          path: fastlane/report.xml
+          if-no-files-found: ignore
