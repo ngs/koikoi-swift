@@ -1,8 +1,9 @@
 # Periphery (unused code) configuration.
 #   periphery scan -- -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
-# Symbols used only from the visionOS target (SpatialBoardView) and the
-# test-only hooks on GameViewModel are reported as unused when scanning the
-# macOS destination; treat those as known false positives.
+# Symbols used only from the visionOS target (SpatialBoardView), the iOS-only
+# branches (WideLayoutMetrics.phone, isLandscapePhone) and the test-only hooks
+# on GameViewModel are reported as unused when scanning the macOS destination;
+# treat those as known false positives.
 project: Koikoi.xcworkspace
 schemes:
   - Koikoi

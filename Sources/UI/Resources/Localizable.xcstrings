@@ -1244,6 +1244,17 @@
         }
       }
     },
+    "Translucent Background": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "背景を透過"
+          }
+        }
+      }
+    },
     "Willow": {
       "extractionState": "manual",
       "localizations": {

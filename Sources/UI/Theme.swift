@@ -38,6 +38,33 @@ public enum KoikoiTheme: String, CaseIterable, Identifiable, Sendable {
     public static let storageKey = "koikoi.theme"
 }
 
+/// テーマ以外の見た目の設定（背景の透過）。
+public enum KoikoiAppearance {
+    /// 背景を透過するかの保存先（`@AppStorage`）。
+    public static let translucencyStorageKey = "koikoi.translucentWindow"
+
+    /// 既定値。visionOS はガラスのウィンドウが標準なので有効、他は無効。
+    public static let defaultTranslucency: Bool = {
+        #if os(visionOS)
+        return true
+        #else
+        return false
+        #endif
+    }()
+
+    /// 透過を選べる環境か（ウィンドウの背後に何かがある macOS と visionOS だけ）。
+    public static var isAvailable: Bool {
+        #if os(macOS) || os(visionOS)
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    /// 透過時にテーマ色をマテリアルへ薄く重ねる濃さ（system テーマは重ねない）。
+    public static let tintOpacity: Double = 0.35
+}
+
 /// 1 テーマ分の色。UI の色リテラルは全てここを経由する。
 public struct KoikoiPalette: Sendable {
     /// 卓（盤面の背景）。
@@ -53,6 +80,8 @@ public struct KoikoiPalette: Sendable {
     public let badge: Color
     /// 強調バッジ（マッチ枚数）に乗せる文字の色。
     public let badgeText: Color
+    /// OS 標準色のテーマか（macOS ではウィンドウを半透明にする判断に使う）。
+    public let usesSystemColors: Bool
 
     public init(theme: KoikoiTheme) {
         guard let folder = theme.assetFolder else {
@@ -71,6 +100,7 @@ public struct KoikoiPalette: Sendable {
             ink = Color.primary
             // アクセントカラーは濃いこともあるため、その上の文字は白にする
             badgeText = .white
+            usesSystemColors = true
             return
         }
         table = Color("\(folder)/Table", bundle: .module)
@@ -81,6 +111,7 @@ public struct KoikoiPalette: Sendable {
         badge = Color("\(folder)/Badge", bundle: .module)
         // カタログの強調色はどれも明るいので、その上の文字は黒で読める
         badgeText = .black
+        usesSystemColors = false
     }
 }
 

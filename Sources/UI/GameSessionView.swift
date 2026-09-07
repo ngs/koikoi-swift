@@ -16,6 +16,9 @@ public struct GameSessionView: View {
     @AppStorage(KoikoiTheme.storageKey)
     private var themeRaw = KoikoiTheme.felt.rawValue
     private var theme: KoikoiTheme { KoikoiTheme(rawValue: themeRaw) ?? .felt }
+    /// 背景を透過するか（対局設定画面のトグルと共有する）。
+    @AppStorage(KoikoiAppearance.translucencyStorageKey)
+    private var translucentWindow = KoikoiAppearance.defaultTranslucency
     #if os(iOS)
     @Environment(\.verticalSizeClass)
     private var verticalSizeClass
@@ -34,18 +37,20 @@ public struct GameSessionView: View {
         NavigationStack {
             content
                 .quitToolbar(
-                    active: model != nil && !showsLandscapeChrome,
+                    active: model != nil && !showsWideChrome,
                     confirming: $confirmingQuit, quit: quit)
-                .landscapeChromeToolbar(
-                    model: model, active: showsLandscapeChrome, palette: palette,
+                .wideChromeToolbar(
+                    model: model, active: showsWideChrome, palette: palette,
                     confirming: $confirmingQuit, quit: quit)
         }
-        // 対局中は卓の色で画面全体を塗る（横向きでセーフエリアの帯が黒く残らないように）
+        // 対局中は卓の色で画面全体を塗る（横向きでセーフエリアの帯が黒く残らないように）。
+        // 透過が有効なときは盤面側で薄く重ねるので、ここでは塗らない。
         .background {
-            if model != nil {
+            if model != nil, !usesTranslucentWindow {
                 palette.table.ignoresSafeArea()
             }
         }
+        .modifier(TranslucentWindowBackground(active: usesTranslucentWindow && model != nil))
         .koikoiTheme(theme)
         .onAppear {
             GameCenterService.shared.authenticate()
@@ -84,9 +89,17 @@ public struct GameSessionView: View {
 
     private var palette: KoikoiPalette { KoikoiPalette(theme: theme) }
 
-    /// 横向き iPhone のときだけ、スコアボードと陣営の見出しをツールバーに載せる。
-    private var showsLandscapeChrome: Bool {
-        #if os(iOS)
+    /// 背景を透過する設定（macOS / visionOS でのみ選べる）。
+    private var usesTranslucentWindow: Bool {
+        KoikoiAppearance.isAvailable && translucentWindow
+    }
+
+    /// スコアボードと陣営の見出しをツールバーに載せるか
+    /// （macOS は常に、iOS は横向き iPhone のときだけ）。
+    private var showsWideChrome: Bool {
+        #if os(macOS)
+        return model != nil
+        #elseif os(iOS)
         return isLandscapePhone && model != nil
         #else
         return false
@@ -145,17 +158,17 @@ private extension View {
         }
     }
 
-    /// 横向き iPhone のツールバー: 左に「You」、中央にスコアボード、
+    /// 三列レイアウトのツールバー: 左に「You」、中央にスコアボード、
     /// 右に「Opponent」と終了ボタン（X が一番外側）。
     @ViewBuilder
-    func landscapeChromeToolbar(
+    func wideChromeToolbar(
         model: GameViewModel?, active: Bool, palette: KoikoiPalette,
         confirming: Binding<Bool>, quit: @escaping () -> Void
     ) -> some View {
-        #if os(iOS)
+        #if os(iOS) || os(macOS)
         if let model, active {
             toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: KoikoiToolbar.headerLeadingPlacement) {
                     KoikoiToolbar.header(Text("You", bundle: .module), palette: palette)
                 }
                 // 見出しはボタンではないので項目ごとの地は敷かない（ぼかしはバーが担う）
@@ -164,21 +177,53 @@ private extension View {
                     GameScoreboard(model: model, style: .strip)
                         .fixedSize()
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: KoikoiToolbar.quitPlacement) {
                     KoikoiToolbar.header(Text("Opponent", bundle: .module), palette: palette)
                 }
                 .sharedBackgroundVisibility(.hidden)
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: KoikoiToolbar.quitPlacement) {
                     KoikoiToolbar.quitButton(confirming: confirming, quit: quit)
                 }
             }
             // 下を流れる札は、バー自体のぼかし越しに見せる
-            .toolbarBackgroundVisibility(.visible, for: .navigationBar)
+            .modifier(WideToolbarBackground())
+            // ウィンドウ名はスコアボードと場所を取り合うので対局中は出さない
+            .navigationTitle(Text(verbatim: ""))
         } else {
             self
         }
         #else
         self
+        #endif
+    }
+}
+
+/// 三列レイアウトのツールバーの地（下を流れる札をぼかす）。
+private struct WideToolbarBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.toolbarBackgroundVisibility(.visible, for: .navigationBar)
+        #elseif os(macOS)
+        content.toolbarBackgroundVisibility(.visible, for: .windowToolbar)
+        #else
+        content
+        #endif
+    }
+}
+
+/// macOS の system テーマでウィンドウをマテリアルにする（デスクトップが透ける）。
+private struct TranslucentWindowBackground: ViewModifier {
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+        if active {
+            content.containerBackground(.thinMaterial, for: .window)
+        } else {
+            content
+        }
+        #else
+        content
         #endif
     }
 }
@@ -191,6 +236,15 @@ private enum KoikoiToolbar {
         return .primaryAction
         #else
         return .topBarTrailing
+        #endif
+    }
+
+    /// 「You」の見出しを置く側。
+    static var headerLeadingPlacement: ToolbarItemPlacement {
+        #if os(macOS)
+        return .navigation
+        #else
+        return .topBarLeading
         #endif
     }
 
@@ -217,8 +271,8 @@ private enum KoikoiToolbar {
         }
     }
 
-    #if os(iOS)
-    /// 横向きのツールバーに置く陣営の見出し（ボタンに見えないよう文字だけ）。
+    #if os(iOS) || os(macOS)
+    /// ツールバーに置く陣営の見出し（ボタンに見えないよう文字だけ）。
     @MainActor
     static func header(_ title: Text, palette: KoikoiPalette) -> some View {
         title

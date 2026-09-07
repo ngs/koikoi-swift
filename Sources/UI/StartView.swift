@@ -9,6 +9,9 @@ public struct GameSetupView: View {
     @AppStorage(KoikoiTheme.storageKey)
     private var themeRaw = KoikoiTheme.felt.rawValue
     private var theme: KoikoiTheme { KoikoiTheme(rawValue: themeRaw) ?? .felt }
+    /// 背景を透過するか（macOS / visionOS のみ）。
+    @AppStorage(KoikoiAppearance.translucencyStorageKey)
+    private var translucentWindow = KoikoiAppearance.defaultTranslucency
     private let onStart: (Int, Difficulty) -> Void
 
     public init(onStart: @escaping (Int, Difficulty) -> Void) {
@@ -80,6 +83,12 @@ public struct GameSetupView: View {
                     Text("Theme", bundle: .module)
                 }
                 .pickerStyle(.segmented)
+
+                if KoikoiAppearance.isAvailable {
+                    Toggle(isOn: $translucentWindow) {
+                        Text("Translucent Background", bundle: .module)
+                    }
+                }
 
                 themePreview
             }

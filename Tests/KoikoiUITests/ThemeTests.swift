@@ -53,6 +53,22 @@ import Testing
         #expect(KoikoiTheme.storageKey == "koikoi.theme")
     }
 
+    /// 背景の透過は macOS / visionOS でのみ選べ、既定は visionOS だけ有効。
+    @Test func translucencyDefaultsPerPlatform() {
+        #expect(KoikoiAppearance.translucencyStorageKey == "koikoi.translucentWindow")
+        #if os(visionOS)
+        #expect(KoikoiAppearance.isAvailable)
+        #expect(KoikoiAppearance.defaultTranslucency)
+        #elseif os(macOS)
+        #expect(KoikoiAppearance.isAvailable)
+        #expect(!KoikoiAppearance.defaultTranslucency)
+        #else
+        // iOS / iPadOS は透過を選べず、卓は常に塗る
+        #expect(!KoikoiAppearance.isAvailable)
+        #expect(!KoikoiAppearance.defaultTranslucency)
+        #endif
+    }
+
     /// system テーマはカタログを引かずに組み立てられる。
     @Test func systemPaletteBuildsWithoutTheCatalog() {
         let palette = KoikoiPalette(theme: .system)
