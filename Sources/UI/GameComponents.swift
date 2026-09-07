@@ -596,7 +596,7 @@ struct HandCardView: View {
                 }
                 .overlay(alignment: .topTrailing) {
                     if matchCount > 0 {
-                        Text("\(matchCount)")
+                        Text(verbatim: String(matchCount))
                             .font(.caption2.bold())
                             .foregroundStyle(palette.badgeText)
                             .padding(4)
