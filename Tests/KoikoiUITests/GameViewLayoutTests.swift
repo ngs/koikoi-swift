@@ -45,6 +45,55 @@ import Testing
         #expect(tile * 8 + 8 * 7 + GameView.boardPadding * 2 <= width + 0.5)
     }
 
+    /// iPad: 横長のウィンドウでは三列レイアウト、縦長では従来の縦積みになる。
+    @Test func iPadPicksLayoutFromTheBoardShape() {
+        // iPadOS 26 のウィンドウ（1350×860）と iPad 横向き
+        for size in [CGSize(width: 1_350, height: 860), CGSize(width: 1_024, height: 768)] {
+            let layout = GameView.layout(
+                forBoardSize: size, alwaysWide: false,
+                isCompactWidth: false, isLandscapePhone: false)
+            #expect(layout.isWide)
+            #expect(layout.wideMetrics == .mac)
+        }
+        // iPad 縦は縦積みのまま
+        let portrait = GameView.layout(
+            forBoardSize: CGSize(width: 820, height: 1_180), alwaysWide: false,
+            isCompactWidth: false, isLandscapePhone: false)
+        #expect(portrait == .vertical)
+    }
+
+    /// iPhone の判定は変わらない（縦は縦積み、横向きは三列で phone の寸法）。
+    @Test func iPhoneLayoutIsUnchanged() {
+        let portrait = GameView.layout(
+            forBoardSize: CGSize(width: 402, height: 874), alwaysWide: false,
+            isCompactWidth: true, isLandscapePhone: false)
+        #expect(portrait == .vertical)
+        let landscape = GameView.layout(
+            forBoardSize: CGSize(width: 874, height: 402), alwaysWide: false,
+            isCompactWidth: true, isLandscapePhone: true)
+        #expect(landscape.wideMetrics == .phone)
+        // macOS はウィンドウが縦長でも三列
+        let mac = GameView.layout(
+            forBoardSize: CGSize(width: 900, height: 1_100), alwaysWide: true,
+            isCompactWidth: false, isLandscapePhone: false)
+        #expect(mac.wideMetrics == .mac)
+    }
+
+    /// 縦積みの札幅は高さでも決まる（iPad 縦は 90〜96pt、低いウィンドウでは縮む）。
+    @Test func verticalTilesFitTheHeight() {
+        let iPadPortrait = GameView.verticalTileWidth(
+            forBoardSize: CGSize(width: 820, height: 1_180))
+        #expect((90...96).contains(iPadPortrait))
+        // 幅が同じでも高さが足りなければ小さくなる
+        let short = GameView.verticalTileWidth(forBoardSize: CGSize(width: 820, height: 700))
+        #expect(short < iPadPortrait)
+        #expect(short >= GameView.cardTileWidth)
+        // iPhone 縦は従来どおり幅で決まる
+        let phone = GameView.verticalTileWidth(
+            forBoardSize: CGSize(width: 402, height: 874), compact: true)
+        #expect(phone == GameView.tileWidth(forBoardWidth: 402, compact: true))
+    }
+
     /// 横向き iPhone: 中央幅と高さの小さい方で札幅が決まる。
     @Test func landscapePhoneTileFitsBothWidthAndHeight() {
         // iPhone 17 Pro の画面（874×402）と、セーフエリアを引いた実測サイズ（756×381）

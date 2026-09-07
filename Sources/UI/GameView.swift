@@ -5,7 +5,7 @@ import SwiftUI
 
 /// 三列レイアウト（左右に陣営、中央に場と手札）の寸法。
 /// 横向き iPhone と macOS で札や列の大きさが違うため、値をまとめて渡す。
-public struct WideLayoutMetrics: Sendable {
+public struct WideLayoutMetrics: Sendable, Equatable {
     /// 左右の列の幅。
     public let sideColumnWidth: CGFloat
     /// 獲得札サムネイルの幅。
@@ -34,6 +34,25 @@ public struct WideLayoutMetrics: Sendable {
         sideColumnWidth: 176, thumbnail: 40, columnSpacing: 16,
         backWidth: 28, backSpacing: -9,
         horizontalPadding: 16, verticalPadding: 16)
+}
+
+/// 盤面のレイアウト。左右に陣営を置く三列か、上下三段の縦積みか。
+enum BoardLayout: Sendable, Equatable {
+    /// 相手陣・場・自陣を上から積む（iPhone 縦・iPad 縦）。
+    case vertical
+    /// 左右に陣営、中央に場と手札（macOS・横向き iPhone・横長の iPad）。
+    case wide(WideLayoutMetrics)
+
+    var isWide: Bool {
+        if case .wide = self { return true }
+        return false
+    }
+
+    /// 三列レイアウトのときの寸法。
+    var wideMetrics: WideLayoutMetrics? {
+        if case .wide(let metrics) = self { return metrics }
+        return nil
+    }
 }
 
 /// 対局画面。上から相手陣・場・自陣の三段構成（全プラットフォーム共有）。
@@ -132,6 +151,43 @@ public struct GameView: View {
         return min(max(available / 8, cardTileWidth), maxCardTileWidth)
     }
 
+    /// 盤面のサイズと size class からレイアウトを決める。
+    /// プラットフォーム依存の判定は呼び出し側から渡す（テストのため純関数にする）。
+    /// - alwaysWide: macOS（ウィンドウが縦長でも三列にする）
+    /// - isCompactWidth: iPhone 縦のような狭い幅
+    /// - isLandscapePhone: 横向き iPhone（高さが足りない）
+    static func layout(
+        forBoardSize size: CGSize,
+        alwaysWide: Bool,
+        isCompactWidth: Bool,
+        isLandscapePhone: Bool
+    ) -> BoardLayout {
+        if alwaysWide { return .wide(.mac) }
+        if isLandscapePhone { return .wide(.phone) }
+        // regular 幅（iPad）で横長なら三列。縦長のときは従来どおり縦積み
+        if !isCompactWidth, size.width > size.height, size.height > 0 {
+            return .wide(.mac)
+        }
+        return .vertical
+    }
+
+    /// 縦積みレイアウトの札幅。幅だけでなく高さにも収まるよう決める
+    /// （場札 2 行 + 手札 1 行 + 上下の獲得札サムネイル 2 行）。
+    static func verticalTileWidth(forBoardSize size: CGSize, compact: Bool = false) -> CGFloat {
+        let widthBased = tileWidth(forBoardWidth: size.width, compact: compact)
+        guard size.height > 0 else { return widthBased }
+        let spacing = gridSpacing(compact: compact)
+        // 高さの固定分: 外周パディング・相手手札 / スコアボードの行・獲得札のラベル 2 行・
+        // 区画間のスペーシング・ステータス行
+        let fixed = boardPadding * 2 + 70 + 20 * 2 + 12 * 2 + spacing * 2 + 20
+        // 札の高さに比例する分（獲得札サムネイルは札幅の 0.47 倍）
+        let perTile = (3 + 2 * 0.47) / Card.aspectRatio
+        let heightBased = floor((size.height - fixed) / perTile)
+        let lowerBound = compact ? minCompactTileWidth : cardTileWidth
+        let upperBound = compact ? cardTileWidth : maxCardTileWidth
+        return min(max(min(widthBased, heightBased), lowerBound), upperBound)
+    }
+
     /// 三列レイアウト: 左右の列を除いた中央幅と、盤面の高さの両方から札幅を決める。
     /// 中央の列は場札（最大 2 行に折り返す）+ 手札 1 行 = 3 行分の高さを要する。
     static func wideTileWidth(metrics: WideLayoutMetrics, forBoardSize size: CGSize) -> CGFloat {
@@ -169,18 +225,23 @@ public struct GameView: View {
     private var isLandscapePhone: Bool { false }
     #endif
 
-    /// 三列レイアウト（左右に陣営、中央に場と手札）を使うか。
-    /// macOS は常に、iOS は横向き iPhone のときだけ。visionOS は空間ボードを使う。
-    private var usesWideLayout: Bool {
+    /// 現在のレイアウト。盤面のサイズで決まるので GeometryReader の中から反映する。
+    @State private var isWideLayout = false
+    /// レイアウトが切り替わったときの通知（ツールバーの陣営見出しを合わせるため）。
+    private let onLayoutChange: ((Bool) -> Void)?
+
+    /// 盤面のサイズからレイアウトを決める。
+    private func resolvedLayout(forBoardSize size: CGSize) -> BoardLayout {
         #if os(macOS)
-        return true
+        return Self.layout(
+            forBoardSize: size, alwaysWide: true,
+            isCompactWidth: false, isLandscapePhone: false)
         #else
-        return isLandscapePhone
+        return Self.layout(
+            forBoardSize: size, alwaysWide: false,
+            isCompactWidth: isCompactWidth, isLandscapePhone: isLandscapePhone)
         #endif
     }
-
-    /// この環境の三列レイアウトの寸法。
-    private var metrics: WideLayoutMetrics { Self.wideMetrics }
 
     /// 背景を透過する設定（macOS / visionOS でのみ選べる）。
     private var usesTranslucentWindow: Bool {
@@ -188,33 +249,34 @@ public struct GameView: View {
     }
 
     /// グリッドを詰めて 8 枚を 1 行に収める必要がある環境（狭い幅、または三列レイアウト）。
-    private var usesCompactSpacing: Bool { isCompactWidth || usesWideLayout }
+    private var usesCompactSpacing: Bool { isCompactWidth || isWideLayout }
 
     public init(
         model: GameViewModel,
         dropTargetsEnabled: Bool = true,
-        onExit: (() -> Void)? = nil
+        onExit: (() -> Void)? = nil,
+        onLayoutChange: ((Bool) -> Void)? = nil
     ) {
         _model = State(initialValue: model)
         self.dropTargetsEnabled = dropTargetsEnabled
         self.onExit = onExit
+        self.onLayoutChange = onLayoutChange
     }
 
     public var body: some View {
         // 盤面幅から札の大きさを決める（iPad 13 インチや広い macOS ウィンドウで拡大する）
         GeometryReader { proxy in
-            board(
-                tile: usesWideLayout
-                    ? Self.wideTileWidth(metrics: metrics, forBoardSize: proxy.size)
-                    : Self.tileWidth(forBoardWidth: proxy.size.width, compact: isCompactWidth),
-                insets: proxy.safeAreaInsets)
+            let layout = resolvedLayout(forBoardSize: proxy.size)
+            board(layout: layout, insets: proxy.safeAreaInsets, size: proxy.size)
+                .onAppear { noteLayout(layout) }
+                .onChange(of: layout) { _, new in noteLayout(new) }
         }
         // 場札・手札 8 枚が 1 行に収まる最小幅（ウィンドウをリサイズできる macOS のみ。
         // iPhone では画面幅を超えて盤面がはみ出すため、グリッドの折り返しに任せる）
         .frame(minWidth: Self.macMinBoardWidth)
         .overlay(alignment: .topTrailing) {
             // 幅が狭いときは相手陣の行に、横向きのときは右カラムに組み込む
-            if !isCompactWidth && !usesWideLayout {
+            if !isCompactWidth && !isWideLayout {
                 scoreboard.padding(Self.boardPadding)
             }
         }
@@ -243,12 +305,21 @@ public struct GameView: View {
         }
     }
 
-    private func board(tile: CGFloat, insets: EdgeInsets) -> some View {
+    /// レイアウトの変化をビュー側の状態とツールバーへ伝える。
+    private func noteLayout(_ layout: BoardLayout) {
+        guard isWideLayout != layout.isWide else { return }
+        isWideLayout = layout.isWide
+        onLayoutChange?(layout.isWide)
+    }
+
+    private func board(layout: BoardLayout, insets: EdgeInsets, size: CGSize) -> some View {
         ZStack {
             tableBackground
-            if usesWideLayout {
-                wideBoard(tile: tile, insets: insets)
+            if let metrics = layout.wideMetrics {
+                let tile = Self.wideTileWidth(metrics: metrics, forBoardSize: size)
+                wideBoard(tile: tile, insets: insets, metrics: metrics)
             } else {
+                let tile = Self.verticalTileWidth(forBoardSize: size, compact: isCompactWidth)
                 // 相手陣は上端・自陣は下端に固定し、山札・場札はセンターに置く
                 // （ウィンドウを広げた分は手札とフィールドの間に入る）
                 VStack(alignment: .leading, spacing: 12) {
@@ -286,17 +357,18 @@ public struct GameView: View {
     // MARK: - 三列レイアウト（横向き iPhone / macOS）
 
     /// 三列レイアウト: 自分の情報（左）・場と手札（中央）・相手情報（右）。
-    private func wideBoard(tile: CGFloat, insets: EdgeInsets) -> some View {
+    private func wideBoard(tile: CGFloat, insets: EdgeInsets, metrics: WideLayoutMetrics)
+        -> some View {
         HStack(alignment: .top, spacing: metrics.columnSpacing) {
             // 他の花札ゲームやスコアボードの並び（You | Opponent）に合わせ、自分を左に置く
             // 幅の固定だけで足りる（横のはみ出しは ScrollView 自身が切る）
-            widePlayerColumn(insets: insets)
+            widePlayerColumn(insets: insets, metrics: metrics)
                 .frame(width: metrics.sideColumnWidth, alignment: .leading)
             wideCenterColumn(tile: tile)
                 .frame(maxWidth: .infinity)
                 // 中央で動く札が側方カラムに隠れないようにする
                 .zIndex(1)
-            wideOpponentColumn(insets: insets)
+            wideOpponentColumn(insets: insets, metrics: metrics)
                 .frame(width: metrics.sideColumnWidth, alignment: .leading)
         }
         .padding(.horizontal, metrics.horizontalPadding)
@@ -305,7 +377,8 @@ public struct GameView: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    private func wideOpponentColumn(insets: EdgeInsets) -> some View {
+    private func wideOpponentColumn(insets: EdgeInsets, metrics: WideLayoutMetrics)
+        -> some View {
         VStack(alignment: .leading, spacing: 6) {
             // 獲得札が増えても列が伸びて中央の手札を押し出さないようスクロールに収める
             ScrollView(.vertical, showsIndicators: false) {
@@ -332,12 +405,14 @@ public struct GameView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .modifier(sideColumnScroll(insets: insets))
+            .modifier(sideColumnScroll(insets: insets, metrics: metrics))
         }
     }
 
     /// 側方カラムのスクロール設定（画面端まで広げ、同じ量を内容の余白に戻す）。
-    private func sideColumnScroll(insets: EdgeInsets) -> SideColumnScroll {
+    private func sideColumnScroll(
+        insets: EdgeInsets, metrics: WideLayoutMetrics
+    ) -> SideColumnScroll {
         SideColumnScroll(
             topMargin: insets.top + metrics.verticalPadding,
             bottomMargin: insets.bottom + metrics.verticalPadding)
@@ -367,7 +442,8 @@ public struct GameView: View {
         }
     }
 
-    private func widePlayerColumn(insets: EdgeInsets) -> some View {
+    private func widePlayerColumn(insets: EdgeInsets, metrics: WideLayoutMetrics)
+        -> some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 6) {
                 YakuBadges(yakus: model.playerYaku, stacked: true)
@@ -383,7 +459,7 @@ public struct GameView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .modifier(sideColumnScroll(insets: insets))
+        .modifier(sideColumnScroll(insets: insets, metrics: metrics))
     }
 
     private func move(_ direction: GameViewModel.MoveDirection) -> KeyPress.Result {

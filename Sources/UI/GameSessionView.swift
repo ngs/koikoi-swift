@@ -23,12 +23,9 @@ public struct GameSessionView: View {
     /// 背景を透過するか（対局設定画面のトグルと共有する）。
     @AppStorage(KoikoiAppearance.translucencyStorageKey)
     private var translucentWindow = KoikoiAppearance.defaultTranslucency
-    #if os(iOS)
-    @Environment(\.verticalSizeClass)
-    private var verticalSizeClass
-    /// 横向き iPhone。盤面に高さの余裕が無いため、スコアボードはツールバーに載せる。
-    private var isLandscapePhone: Bool { verticalSizeClass == .compact }
-    #endif
+    /// 盤面が三列レイアウトか（GameView から通知される）。
+    /// 三列のときはスコアボードと陣営の見出しをツールバーに載せる。
+    @State private var wideBoard = false
 
     /// デバッグ用の対局数上書きキー（起動引数 `-KoikoiDebugRounds <n>`）。
     static let debugRoundsKey = "KoikoiDebugRounds"
@@ -78,7 +75,10 @@ public struct GameSessionView: View {
 
     @ViewBuilder private var content: some View {
         if let model {
-            GameView(model: model, onExit: quit)
+            GameView(model: model, onExit: quit) { wide in
+                // 盤面のレイアウトに合わせてツールバーの陣営見出しを出し入れする
+                wideBoard = wide
+            }
         } else {
             GameSetupView { rounds, difficulty in
                 let record = GameRecord(
@@ -101,10 +101,8 @@ public struct GameSessionView: View {
     /// スコアボードと陣営の見出しをツールバーに載せるか
     /// （macOS は常に、iOS は横向き iPhone のときだけ）。
     private var showsWideChrome: Bool {
-        #if os(macOS)
-        return model != nil
-        #elseif os(iOS)
-        return isLandscapePhone && model != nil
+        #if os(macOS) || os(iOS)
+        return model != nil && wideBoard
         #else
         return false
         #endif
