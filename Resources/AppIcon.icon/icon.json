@@ -2,13 +2,13 @@
   "fill-specializations" : [
     {
       "value" : {
-        "automatic-gradient" : "gray:0.79112,1.00000"
+        "automatic-gradient" : "display-p3:0.95557,0.93066,0.86475,1.00000"
       }
     },
     {
       "appearance" : "dark",
       "value" : {
-        "solid" : "display-p3:0.00000,0.00000,0.00000,1.00000"
+        "solid" : "display-p3:0.68994,0.17200,0.13660,1.00000"
       }
     }
   ],
@@ -20,7 +20,7 @@
             {
               "appearance" : "dark",
               "value" : {
-                "solid" : "display-p3:0.88729,0.24911,0.24095,1.00000"
+                "solid" : "display-p3:0.95557,0.93066,0.86475,1.00000"
               }
             },
             {
@@ -52,7 +52,7 @@
             {
               "appearance" : "dark",
               "value" : {
-                "solid" : "display-p3:0.88729,0.24911,0.24095,1.00000"
+                "solid" : "display-p3:0.95557,0.93066,0.86475,1.00000"
               }
             },
             {

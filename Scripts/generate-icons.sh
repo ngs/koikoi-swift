@@ -28,11 +28,11 @@ cat > "$VISION_OUT/Contents.json" <<'EOF'
 }
 EOF
 
-# 背面レイヤーは AppIcon.icon の背景色（icon.json の fill）と同じ無地。
+# 背面レイヤーは AppIcon.icon のライト時の背景色（icon.json の fill-specializations 先頭）と同じ無地。
 BACK_SVG="$(mktemp -t koikoi-icon-back).svg"
 trap 'rm -f "$BACK_SVG"' EXIT
 cat > "$BACK_SVG" <<'EOF3'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#F5EDDB"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#F4EDDC"/></svg>
 EOF3
 
 for layer in Front Middle Back; do
