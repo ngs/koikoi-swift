@@ -1,58 +1,17 @@
 #!/bin/bash
-# Resources/icon-template.svg から AppIcon.appiconset とアプリ内表示用の AppIconArtwork.imageset を生成する。
+# iOS / macOS のアプリアイコンは Resources/AppIcon.icon（Icon Composer で編集）から Xcode が生成する。
+# このスクリプトは Icon Composer が扱えない残りを生成する:
+#   - visionOS 用 AppIconVision.solidimagestack（前面・中面は AppIcon.icon/Assets の SVG、背面は無地）
+#   - アプリ内表示用 AppIconArtwork.imageset（Resources/icon-template.svg = 3 層を合成した絵柄）
 # レンダリングは Scripts/render_icon.swift（AppKit）で行う（macOS 標準ツールのみ使用）。
-# macOS アイコンは MAC_INSET（既定 0）でマージン + 角丸を任意に適用できる。
+# 絵柄を差し替えるときは AppIcon.icon/Assets の各層と icon-template.svg を揃えて更新すること。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SVG="$REPO_ROOT/Resources/icon-template.svg"
-OUT="$REPO_ROOT/Resources/Assets.xcassets/AppIcon.appiconset"
+ICON_ASSETS="$REPO_ROOT/Resources/AppIcon.icon/Assets"
 VISION_OUT="$REPO_ROOT/Resources/Assets.xcassets/AppIconVision.solidimagestack"
-
-mkdir -p "$OUT"
-
-render() { # px out radius margin
-  swift "$SCRIPT_DIR/render_icon.swift" "$SVG" "$OUT/$2" "$1" "${3:-0}" "${4:-0}"
-  echo "  $2 (${1}px)"
-}
-
-echo "iOS/visionOS 用 (フルブリード):"
-render 1024 icon-ios-1024.png
-
-# macOS 用のインセット比率。背景つきの角丸四角アイコンなら Apple 流儀の 0.098 を指定する。
-# 現在のアイコンは背景なしの自立した形（SVG 自体に余白を含む）なので 0 = フルブリード。
-MAC_INSET="${MAC_INSET:-0}"
-
-echo "macOS 用 (インセット $MAC_INSET):"
-for entry in 16:1 16:2 32:1 32:2 128:1 128:2 256:1 256:2 512:1 512:2; do
-  size="${entry%%:*}"; scale="${entry##*:}"
-  px=$((size * scale))
-  margin=$(awk "BEGIN { print $px * $MAC_INSET }")
-  radius=$(awk "BEGIN { if ($MAC_INSET > 0) print ($px - 2 * $px * $MAC_INSET) * 0.2237; else print 0 }")
-  suffix=""
-  [ "$scale" = "2" ] && suffix="@2x"
-  render "$px" "icon-mac-${size}${suffix}.png" "$radius" "$margin"
-done
-
-cat > "$OUT/Contents.json" <<'EOF'
-{
-  "images" : [
-    { "filename" : "icon-ios-1024.png", "idiom" : "universal", "platform" : "ios", "size" : "1024x1024" },
-    { "filename" : "icon-mac-16.png", "idiom" : "mac", "scale" : "1x", "size" : "16x16" },
-    { "filename" : "icon-mac-16@2x.png", "idiom" : "mac", "scale" : "2x", "size" : "16x16" },
-    { "filename" : "icon-mac-32.png", "idiom" : "mac", "scale" : "1x", "size" : "32x32" },
-    { "filename" : "icon-mac-32@2x.png", "idiom" : "mac", "scale" : "2x", "size" : "32x32" },
-    { "filename" : "icon-mac-128.png", "idiom" : "mac", "scale" : "1x", "size" : "128x128" },
-    { "filename" : "icon-mac-128@2x.png", "idiom" : "mac", "scale" : "2x", "size" : "128x128" },
-    { "filename" : "icon-mac-256.png", "idiom" : "mac", "scale" : "1x", "size" : "256x256" },
-    { "filename" : "icon-mac-256@2x.png", "idiom" : "mac", "scale" : "2x", "size" : "256x256" },
-    { "filename" : "icon-mac-512.png", "idiom" : "mac", "scale" : "1x", "size" : "512x512" },
-    { "filename" : "icon-mac-512@2x.png", "idiom" : "mac", "scale" : "2x", "size" : "512x512" }
-  ],
-  "info" : { "author" : "xcode", "version" : 1 }
-}
-EOF
 
 # visionOS は 3 レイヤーの solidimagestack が必須（背面レイヤーは不透明であること）。
 echo "visionOS 用 (3 レイヤー):"
@@ -69,8 +28,17 @@ cat > "$VISION_OUT/Contents.json" <<'EOF'
 }
 EOF
 
+# 背面レイヤーは AppIcon.icon の背景色（icon.json の fill）と同じ無地。
+BACK_SVG="$(mktemp -t koikoi-icon-back).svg"
+trap 'rm -f "$BACK_SVG"' EXIT
+cat > "$BACK_SVG" <<'EOF3'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#F5EDDB"/></svg>
+EOF3
+
 for layer in Front Middle Back; do
   lower="$(echo "$layer" | tr '[:upper:]' '[:lower:]')"
+  src="$ICON_ASSETS/$lower.svg"
+  [ "$layer" = "Back" ] && src="$BACK_SVG"
   dir="$VISION_OUT/$layer.solidimagestacklayer"
   mkdir -p "$dir/Content.imageset"
   echo '{ "info" : { "author" : "xcode", "version" : 1 } }' > "$dir/Contents.json"
@@ -82,13 +50,11 @@ for layer in Front Middle Back; do
   "info" : { "author" : "xcode", "version" : 1 }
 }
 EOF
-  swift "$SCRIPT_DIR/render_icon.swift" \
-    "$REPO_ROOT/Resources/icon-vision-$lower.svg" \
-    "$dir/Content.imageset/$layer.png" 1024
+  swift "$SCRIPT_DIR/render_icon.swift" "$src" "$dir/Content.imageset/$layer.png" 1024
   echo "  $layer.solidimagestacklayer (1024px)"
 done
 
-# アプリ内表示用（About 画面など）。AppIcon.appiconset はコードから参照できないため、
+# アプリ内表示用（About 画面など）。AppIcon.icon はコードから参照できないため、
 # 同じ SVG を通常の imageset として置き、Image("AppIconArtwork") で全プラットフォームから使う。
 ARTWORK_OUT="$REPO_ROOT/Resources/Assets.xcassets/AppIconArtwork.imageset"
 echo "アプリ内表示用 (ベクター imageset):"
@@ -105,4 +71,4 @@ cat > "$ARTWORK_OUT/Contents.json" <<'EOF2'
 EOF2
 echo "  AppIconArtwork.imageset"
 
-echo "完了: $OUT, $VISION_OUT, $ARTWORK_OUT"
+echo "完了: $VISION_OUT, $ARTWORK_OUT"

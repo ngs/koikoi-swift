@@ -100,7 +100,8 @@ let project = Project(
                 .package(product: "KoikoiAI"),
                 .package(product: "KoikoiUI")
             ],
-            // visionOS は 3 レイヤーの solidimagestack が必須のため別アセットを使う
+            // iOS / macOS のアイコンは Resources/AppIcon.icon（Icon Composer）から Xcode が生成する。
+            // visionOS は Icon Composer 非対応で 3 レイヤーの solidimagestack が必須のため別アセットを使う
             // （未設定だと CFBundleIcons.CFBundlePrimaryIcon 欠落でアップロードが 90970 で失敗する）。
             // Tuist がターゲットへ無条件の ASSETCATALOG_COMPILER_APPICON_NAME を自動生成するため、
             // プロジェクトレベルではなくターゲットレベルで上書きする必要がある。
