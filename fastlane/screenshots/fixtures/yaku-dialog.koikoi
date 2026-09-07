@@ -1,0 +1,113 @@
+{
+  "difficulty" : "hard",
+  "moves" : [
+    {
+      "playHand" : {
+        "handID" : 7
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 32
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 15
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 23
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 9
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 39
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 45
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 43
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 11
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 46
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 2
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 31
+      }
+    },
+    {
+      "koikoi" : {
+
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 1
+      }
+    },
+    {
+      "shobu" : {
+
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 36
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 14
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 34
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 5
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 9
+      }
+    },
+    {
+      "chooseDrawnField" : {
+        "fieldID" : 21
+      }
+    }
+  ],
+  "rounds" : 12,
+  "seed" : 1,
+  "version" : 1
+}

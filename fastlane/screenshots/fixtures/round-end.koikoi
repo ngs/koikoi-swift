@@ -1,0 +1,246 @@
+{
+  "difficulty" : "hard",
+  "moves" : [
+    {
+      "playHand" : {
+        "handID" : 28
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 3
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 44
+      }
+    },
+    {
+      "playHand" : {
+        "fieldChoiceID" : 21,
+        "handID" : 20
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 38
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 18
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 6
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 26
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 5
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 27
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 24
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 41
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 13
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 34
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 30
+      }
+    },
+    {
+      "playHand" : {
+        "fieldChoiceID" : 37,
+        "handID" : 36
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 20
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 16
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 14
+      }
+    },
+    {
+      "chooseDrawnField" : {
+        "fieldID" : 1
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 18
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 21
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 8
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 31
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 19
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 35
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 6
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 25
+      }
+    },
+    {
+      "koikoi" : {
+
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 9
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 7
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 32
+      }
+    },
+    {
+      "playHand" : {
+        "fieldChoiceID" : 12,
+        "handID" : 13
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 36
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 40
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 24
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 47
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 44
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 18
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 45
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 31
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 46
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 29
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 27
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 4
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 35
+      }
+    },
+    {
+      "playHand" : {
+        "handID" : 32
+      }
+    }
+  ],
+  "rounds" : 12,
+  "seed" : 18,
+  "version" : 1
+}
