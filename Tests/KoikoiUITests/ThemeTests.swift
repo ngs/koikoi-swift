@@ -53,6 +53,14 @@ import Testing
         #expect(KoikoiTheme.storageKey == "koikoi.theme")
     }
 
+    /// 卓（visionOS のフェルト）の不透明度は、透過の有無で切り替わる。
+    @Test func tableOpacityFollowsTranslucency() {
+        #expect(KoikoiAppearance.tableOpacity(translucent: false) == 1)
+        #expect(KoikoiAppearance.tableOpacity(translucent: true) == KoikoiAppearance.tintOpacity)
+        #expect(KoikoiAppearance.tintOpacity > 0)
+        #expect(KoikoiAppearance.tintOpacity < 1)
+    }
+
     /// 背景の透過は macOS / visionOS でのみ選べ、既定は visionOS だけ有効。
     @Test func translucencyDefaultsPerPlatform() {
         #expect(KoikoiAppearance.translucencyStorageKey == "koikoi.translucentWindow")

@@ -19,6 +19,12 @@ struct SpatialBoardView: View {
     @AppStorage(KoikoiTheme.storageKey)
     private var themeRaw = KoikoiTheme.felt.rawValue
     private var theme: KoikoiTheme { KoikoiTheme(rawValue: themeRaw) ?? .felt }
+    /// フェルトを透かすか（対局設定パネルのトグルと共有する）。
+    @AppStorage(KoikoiAppearance.translucencyStorageKey)
+    private var translucentWindow = KoikoiAppearance.defaultTranslucency
+    private var spatialColors: SpatialColors {
+        SpatialColors(palette: KoikoiPalette(theme: theme), translucent: translucentWindow)
+    }
     private let store = GameStore.shared
 
     var body: some View {
@@ -26,11 +32,11 @@ struct SpatialBoardView: View {
             RealityView { content in
                 content.add(board.root)
                 ground(content, proxy: proxy)
-                board.apply(colors: SpatialColors(palette: KoikoiPalette(theme: theme)))
+                board.apply(colors: spatialColors)
                 board.sync(model: model, animated: false)
             } update: { content in
                 ground(content, proxy: proxy)
-                board.apply(colors: SpatialColors(palette: KoikoiPalette(theme: theme)))
+                board.apply(colors: spatialColors)
                 board.sync(model: model, animated: true)
             }
             .gesture(
@@ -147,11 +153,27 @@ private struct SpatialColors: Equatable {
     let felt: UIColor
     let cardBack: UIColor
     let glow: UIColor
+    /// フェルトの不透明度（透過が有効なら部屋が透ける）。札と山札は常に不透明。
+    let feltOpacity: Float
 
-    init(palette: KoikoiPalette) {
+    init(palette: KoikoiPalette, translucent: Bool) {
         felt = UIColor(palette.table)
         cardBack = UIColor(palette.cardBack)
         glow = UIColor(palette.highlight)
+        feltOpacity = Float(KoikoiAppearance.tableOpacity(translucent: translucent))
+    }
+
+    /// フェルトのマテリアル。透過時はブレンドを有効にする
+    /// （SimpleMaterial は色のアルファを反映しないため PBR を使う）。
+    var feltMaterial: PhysicallyBasedMaterial {
+        var material = PhysicallyBasedMaterial()
+        material.baseColor = .init(tint: felt)
+        material.roughness = 1.0
+        material.metallic = 0.0
+        if feltOpacity < 1 {
+            material.blending = .transparent(opacity: .init(floatLiteral: feltOpacity))
+        }
+        return material
     }
 }
 
@@ -174,7 +196,9 @@ private final class BoardScene {
     /// 札ごとの予約世代。新しい予約が入ったら古い遅延実行を無効化する。
     private var generations: [Int: Int] = [:]
     /// マテリアルの色（既定は緑羅紗。テーマ変更時に apply(colors:) で差し替える）。
-    private var colors = SpatialColors(palette: KoikoiPalette(theme: .felt))
+    private var colors = SpatialColors(
+        palette: KoikoiPalette(theme: .felt),
+        translucent: KoikoiAppearance.defaultTranslucency)
 
     private enum Zone { case hand, field, captured, drawn }
 
@@ -474,7 +498,7 @@ extension BoardScene {
         guard felt == nil else { return }
         let entity = ModelEntity(
             mesh: .generateBox(width: Self.feltWidth, height: 0.006, depth: Self.feltDepth),
-            materials: [SimpleMaterial(color: colors.felt, roughness: 1.0, isMetallic: false)])
+            materials: [colors.feltMaterial])
         entity.name = "felt"
         entity.position = [0, -0.003, 0]
         root.addChild(entity)
@@ -551,9 +575,8 @@ extension BoardScene {
     func apply(colors newColors: SpatialColors) {
         guard newColors != colors else { return }
         colors = newColors
-        let table = SimpleMaterial(color: colors.felt, roughness: 1.0, isMetallic: false)
         let back = SimpleMaterial(color: colors.cardBack, roughness: 1.0, isMetallic: false)
-        felt?.model?.materials = [table]
+        felt?.model?.materials = [colors.feltMaterial]
         for entity in backs {
             entity.model?.materials = [back]
         }

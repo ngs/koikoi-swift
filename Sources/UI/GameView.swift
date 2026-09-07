@@ -483,40 +483,59 @@ public struct GameView: View {
                             },
                             on: card)
                         .matchedGeometryEffect(id: card.id, in: cardSpace)
-                        // がっちゃんこ中: 移動札を対象の場札に重ねて表示。
-                        // タップ/キー操作は元の位置から飛ばし、D&D はドロップ位置に出現
+                        // がっちゃんこ中の移動札を置く位置。札そのものはグリッドの
+                        // オーバーレイに描くので、ここには透明のアンカーだけを残す
+                        // （LazyVGrid は macOS で zIndex を尊重せず、グリッド項目の中に
+                        // 描くと詰め直される隣の札に潜り込んでしまう）
                         if let animation = model.captureAnimation, animation.target == card {
-                            if animation.fliesFromSource {
-                                CardImage(animation.movingCard)
-                                    .frame(width: tile * 0.9)
-                                    .matchedGeometryEffect(
-                                        id: animation.movingCard.id, in: cardSpace)
-                                    .offset(x: 8, y: -8)
-                                    .lifted(26)  // visionOS: 空中を飛んで重なる
-                                    .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
-                            } else {
-                                CardImage(animation.movingCard)
-                                    .frame(width: tile * 0.9)
-                                    .offset(x: 8, y: -8)
-                                    .lifted(26)
-                                    .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
-                                    .transition(.scale(scale: 0.92).combined(with: .opacity))
-                            }
+                            Color.clear
+                                .frame(width: tile, height: tile / Card.aspectRatio)
+                                .matchedGeometryEffect(
+                                    id: Self.captureAnchorID, in: cardSpace, isSource: true)
                         }
                     }
                     // 移動中・獲得直後の札は、詰め直される隣の札より前面に置く
-                    // （消える札が隣にかぶられて「下をくぐる」ように見えるのを防ぐ）
+                    // （iOS ではこれで十分。macOS の LazyVGrid は zIndex を無視する）
                     .zIndex(raisesAboveField(card) ? 1 : 0)
-                    .transition(
-                        .asymmetric(
-                            insertion: .identity,
-                            removal: .opacity.combined(with: .scale(scale: 0.9))))
+                    // 獲得された札は飛来アニメーションの直後に即消す。フェードで残ると
+                    // 詰め直される隣の札にかぶられて「下をくぐる」ように見える
+                    .transition(.identity)
                 }
             }
             .background {
                 // 空きへの捨て札ドロップ受け（透明）
                 cardDropTarget(Color.clear.contentShape(Rectangle()), on: nil)
             }
+            // 移動札はグリッドの外側に描き、どの場札よりも確実に前面に置く
+            .overlay { flyingCard(tile: tile) }
+        }
+    }
+
+    /// がっちゃんこ中の移動札を置くアンカーの ID（札の ID = Int とは衝突しない）。
+    private static let captureAnchorID = "capture-target"
+
+    /// がっちゃんこ中の移動札。対象の場札に重なる位置に描く。
+    /// タップ/キー操作は元の位置から飛ばし、D&D はドロップ位置に出現する。
+    @ViewBuilder
+    private func flyingCard(tile: CGFloat) -> some View {
+        if let animation = model.captureAnimation {
+            Group {
+                if animation.fliesFromSource {
+                    CardImage(animation.movingCard)
+                        .frame(width: tile * 0.9)
+                        .matchedGeometryEffect(id: animation.movingCard.id, in: cardSpace)
+                } else {
+                    CardImage(animation.movingCard)
+                        .frame(width: tile * 0.9)
+                        .transition(.scale(scale: 0.92).combined(with: .opacity))
+                }
+            }
+            .offset(x: 8, y: -8)
+            .lifted(26)  // visionOS: 空中を飛んで重なる
+            .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
+            .matchedGeometryEffect(
+                id: Self.captureAnchorID, in: cardSpace,
+                properties: .position, isSource: false)
         }
     }
 

@@ -1,6 +1,10 @@
 #if !os(visionOS)
 import SwiftUI
 
+#if os(macOS)
+import AppKit
+#endif
+
 /// iPhone / iPad / macOS のルート画面。
 /// 起動時に保存済みの対局があればそのまま復元し、無ければ対局設定から始める。
 /// 手が進むたびに `GameStore` へ自動保存するため、ユーザーはファイルを意識しない。
@@ -218,7 +222,14 @@ private struct TranslucentWindowBackground: ViewModifier {
     func body(content: Content) -> some View {
         #if os(macOS)
         if active {
-            content.containerBackground(.thinMaterial, for: .window)
+            // SwiftUI のマテリアルは非アクティブなウィンドウでぼかしを止めて
+            // 不透明になるため、状態を固定した NSVisualEffectView を地に敷き、
+            // ウィンドウ自体は透明にする。
+            content
+                .background {
+                    WindowMaterial().ignoresSafeArea()
+                }
+                .containerBackground(.clear, for: .window)
         } else {
             content
         }
@@ -227,6 +238,29 @@ private struct TranslucentWindowBackground: ViewModifier {
         #endif
     }
 }
+
+#if os(macOS)
+/// ウィンドウの地に敷くマテリアル。
+/// `NSVisualEffectView` の既定 (`followsWindowActiveState`) は前面でないときに
+/// ぼかしを止めるので、`.active` に固定して背面でも透過を保つ。
+private struct WindowMaterial: NSViewRepresentable {
+    func makeNSView(context _: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        configure(view)
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context _: Context) {
+        configure(view)
+    }
+
+    private func configure(_ view: NSVisualEffectView) {
+        view.material = .underWindowBackground
+        view.blendingMode = .behindWindow
+        view.state = .active
+    }
+}
+#endif
 
 /// ツールバーの部品（縦向き・横向きで同じボタンと見出しを使う）。
 private enum KoikoiToolbar {

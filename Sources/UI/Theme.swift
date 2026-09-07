@@ -62,7 +62,13 @@ public enum KoikoiAppearance {
     }
 
     /// 透過時にテーマ色をマテリアルへ薄く重ねる濃さ（system テーマは重ねない）。
+    /// visionOS の空間ボードのフェルトも同じ濃さで透かす。
     public static let tintOpacity: Double = 0.35
+
+    /// 卓（visionOS のフェルト）の不透明度。透過が無効なら 1。
+    public static func tableOpacity(translucent: Bool) -> Double {
+        translucent ? tintOpacity : 1
+    }
 }
 
 /// 1 テーマ分の色。UI の色リテラルは全てここを経由する。
