@@ -12,6 +12,9 @@
         }
       }
     },
+    "%lld" : {
+
+    },
     "%lld pts" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -469,7 +472,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Koikoi"
+            "value" : "花札こいこい"
           }
         }
       }

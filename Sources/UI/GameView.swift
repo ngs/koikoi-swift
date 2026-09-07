@@ -433,8 +433,8 @@ public struct GameView: View {
             Spacer(minLength: 0)
             HStack(spacing: 12) {
                 drawnPreview(tile: tile)
-                Spacer(minLength: 0)
                 statusText
+                Spacer(minLength: 0)
             }
             handGrid(tile: tile)
                 .frame(width: rowWidth)
