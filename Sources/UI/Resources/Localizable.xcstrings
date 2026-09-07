@@ -12,9 +12,6 @@
         }
       }
     },
-    "%lld" : {
-
-    },
     "%lld pts" : {
       "extractionState" : "manual",
       "localizations" : {
