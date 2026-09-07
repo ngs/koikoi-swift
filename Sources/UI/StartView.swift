@@ -49,7 +49,12 @@ public struct GameSetupView: View {
     public var body: some View {
         VStack(spacing: 24) {
             VStack(spacing: 4) {
-                // 上段はアプリ名、下段は副題（言語ごとに自然な並びになるよう別キーにする）
+                // アプリアイコンの絵柄（メインバンドルの AppIconArtwork.imageset、Scripts/generate-icons.sh が生成）
+                Image("AppIconArtwork", bundle: .main)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
+                    .accessibilityHidden(true)
                 Text("Koikoi", bundle: .module)
                     .font(.system(size: 56, weight: .bold))
                 Text("Hanafuda Koi-Koi", bundle: .module)

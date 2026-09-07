@@ -1,7 +1,7 @@
 #!/bin/bash
-# Resources/icon-template.svg から AppIcon.appiconset を生成する。
+# Resources/icon-template.svg から AppIcon.appiconset とアプリ内表示用の AppIconArtwork.imageset を生成する。
 # レンダリングは Scripts/render_icon.swift（AppKit）で行う（macOS 標準ツールのみ使用）。
-# macOS アイコンは Apple 流儀（約 10% マージン + 角丸）を適用する。
+# macOS アイコンは MAC_INSET（既定 0）でマージン + 角丸を任意に適用できる。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -20,12 +20,16 @@ render() { # px out radius margin
 echo "iOS/visionOS 用 (フルブリード):"
 render 1024 icon-ios-1024.png
 
-echo "macOS 用 (マージン + 角丸):"
+# macOS 用のインセット比率。背景つきの角丸四角アイコンなら Apple 流儀の 0.098 を指定する。
+# 現在のアイコンは背景なしの自立した形（SVG 自体に余白を含む）なので 0 = フルブリード。
+MAC_INSET="${MAC_INSET:-0}"
+
+echo "macOS 用 (インセット $MAC_INSET):"
 for entry in 16:1 16:2 32:1 32:2 128:1 128:2 256:1 256:2 512:1 512:2; do
   size="${entry%%:*}"; scale="${entry##*:}"
   px=$((size * scale))
-  margin=$(awk "BEGIN { print $px * 0.098 }")
-  radius=$(awk "BEGIN { print ($px - 2 * $px * 0.098) * 0.2237 }")
+  margin=$(awk "BEGIN { print $px * $MAC_INSET }")
+  radius=$(awk "BEGIN { if ($MAC_INSET > 0) print ($px - 2 * $px * $MAC_INSET) * 0.2237; else print 0 }")
   suffix=""
   [ "$scale" = "2" ] && suffix="@2x"
   render "$px" "icon-mac-${size}${suffix}.png" "$radius" "$margin"
@@ -84,4 +88,21 @@ EOF
   echo "  $layer.solidimagestacklayer (1024px)"
 done
 
-echo "完了: $OUT, $VISION_OUT"
+# アプリ内表示用（About 画面など）。AppIcon.appiconset はコードから参照できないため、
+# 同じ SVG を通常の imageset として置き、Image("AppIconArtwork") で全プラットフォームから使う。
+ARTWORK_OUT="$REPO_ROOT/Resources/Assets.xcassets/AppIconArtwork.imageset"
+echo "アプリ内表示用 (ベクター imageset):"
+mkdir -p "$ARTWORK_OUT"
+cp "$SVG" "$ARTWORK_OUT/AppIconArtwork.svg"
+cat > "$ARTWORK_OUT/Contents.json" <<'EOF2'
+{
+  "images" : [
+    { "filename" : "AppIconArtwork.svg", "idiom" : "universal" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 },
+  "properties" : { "preserves-vector-representation" : true }
+}
+EOF2
+echo "  AppIconArtwork.imageset"
+
+echo "完了: $OUT, $VISION_OUT, $ARTWORK_OUT"
