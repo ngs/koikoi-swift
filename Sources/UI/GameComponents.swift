@@ -458,7 +458,7 @@ struct YakuBadges: View {
             Text(verbatim: yaku.kind.localizedName)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: stacked)
-            Text("\(yaku.points)")
+            Text(verbatim: String(yaku.points))
                 .font(.caption2.bold().monospacedDigit())
                 .padding(.horizontal, 5)
                 .padding(.vertical, 1)
