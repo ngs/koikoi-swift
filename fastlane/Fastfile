@@ -92,8 +92,8 @@ platform :ios do
     app = Spaceship::ConnectAPI::App.find('io.ngs.Koikoi')
     UI.user_error!('App not found: io.ngs.Koikoi') if app.nil?
     app.update(attributes: {
-      contentRightsDeclaration: Spaceship::ConnectAPI::App::ContentRightsDeclaration::USES_THIRD_PARTY_CONTENT
-    })
+                 contentRightsDeclaration: Spaceship::ConnectAPI::App::ContentRightsDeclaration::USES_THIRD_PARTY_CONTENT
+               })
     UI.success('Content rights declaration set to USES_THIRD_PARTY_CONTENT')
   end
 
