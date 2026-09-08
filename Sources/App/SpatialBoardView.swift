@@ -35,11 +35,18 @@ enum SpatialLayout {
     static let opponentHandSpot: SIMD3<Float> = [0, 0.02, opponentHandZ]
 
     /// 獲得札のパネル（卓に伏せる attachment）と、そこへ飛ぶ札の落とし所。
-    static let capturedPlayer: SIMD3<Float> = [0.02, 0.012, 0.13]
-    static let capturedOpponent: SIMD3<Float> = [0.02, 0.012, -0.20]
+    static let capturedPlayer: SIMD3<Float> = [0.02, capturedPanelY, 0.13]
+    static let capturedOpponent: SIMD3<Float> = [0.02, capturedPanelY, -0.20]
     /// 伏せたパネルの向き。X 軸まわりに -60 度で、真上から読めて手前に 30 度起きる
     /// （立てた手札越しでも文字が読めるよう、卓と垂直から少し起こす）。
     static let flatTilt: Float = -60 * .pi / 180
+    /// パネルの中心の高さ。attachment の原点は中心なので、傾けたぶん下端が沈む
+    /// （半分の高さ × cos(傾き)）。卓に潜って下端の角丸が隠れないよう、その分に
+    /// 少し余裕を足して浮かせる。
+    static var capturedPanelY: Float {
+        let height = Float(capturedPanelHeight + capturedPanelPadding * 2) / pointsPerMeter
+        return height / 2 * cos(flatTilt) + 0.004
+    }
 
     /// 立てて浮かべるパネル（視線に正対するので回転は掛けない）。
     /// 役とリーチは卓の右、スコアボードは左に離して置く
@@ -50,9 +57,12 @@ enum SpatialLayout {
     /// ダイアログは立てた手札より手前・少し上に置く。
     static let dialog: SIMD3<Float> = [0, 0.28, 0.46]
 
-    /// 卓に伏せる獲得札パネルの大きさ（pt。visionOS は 1360pt = 1m）。
+    /// visionOS の attachment は 1360pt = 1m で描かれる。
+    static let pointsPerMeter: Float = 1_360
+    /// 卓に伏せる獲得札パネルの大きさ（pt）。
     static let capturedPanelWidth: CGFloat = 430
     static let capturedPanelHeight: CGFloat = 84
+    static let capturedPanelPadding: CGFloat = 10
     static let capturedThumbnail: CGFloat = 34
 }
 
@@ -222,7 +232,7 @@ struct SpatialBoardView: View {
                     height: SpatialLayout.capturedPanelHeight,
                     alignment: .leading)
                 // 卓の色に関わらず種類のラベルが読めるよう、薄い盆を敷く
-                .padding(10)
+                .padding(SpatialLayout.capturedPanelPadding)
                 .background(
                     .thinMaterial,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
