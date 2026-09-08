@@ -1,0 +1,99 @@
+name: Update App Store Metadata
+
+on:
+  # Metadata committed to master is pushed to App Store Connect with deliver.
+  push:
+    branches: [master]
+    paths:
+      - "fastlane/metadata/**"
+      - "fastlane/app_privacy_details.json"
+      - "fastlane/Fastfile"
+      - ".github/workflows/metadata.yml"
+
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Platform whose metadata to upload"
+        required: true
+        type: choice
+        options:
+          - all
+          - ios
+          - mac
+          - visionos
+        default: all
+
+permissions:
+  contents: read
+
+env:
+  FASTLANE_SKIP_UPDATE_CHECK: "1"
+  APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY_ID }}
+  APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+  APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_KEY }}
+  APP_STORE_CONNECT_API_KEY_IS_KEY_CONTENT_BASE64: "true"
+
+jobs:
+  determine-platforms:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          platform="${{ github.event.inputs.platform || 'all' }}"
+          if [[ "$platform" == "all" ]]; then
+            echo 'matrix=["ios","mac","visionos"]' >> "$GITHUB_OUTPUT"
+          else
+            echo "matrix=[\"$platform\"]" >> "$GITHUB_OUTPUT"
+          fi
+
+  upload:
+    needs: determine-platforms
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJson(needs.determine-platforms.outputs.matrix) }}
+    # Uploads always target the same App Store Connect app regardless of ref,
+    # so serialize per platform and never cancel an upload in progress.
+    concurrency:
+      group: metadata-${{ matrix.platform }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      # deliver fails when the only versions are in review or live, so skip
+      # the upload unless a version is in an editable state.
+      - name: Check for an editable version
+        id: check
+        run: |
+          if bundle exec fastlane ${{ matrix.platform }} check_editable_version; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload metadata with deliver
+        if: steps.check.outputs.available == 'true'
+        run: bundle exec fastlane ${{ matrix.platform }} deliver_metadata
+
+      - name: Skip notice
+        if: steps.check.outputs.available != 'true'
+        run: echo "Skipped ${{ matrix.platform }} because no App Store version is editable"
+
+      - name: Upload fastlane report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: metadata-${{ matrix.platform }}-${{ github.sha }}
+          path: fastlane/report.xml
+          if-no-files-found: ignore

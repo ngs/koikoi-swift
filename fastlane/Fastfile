@@ -53,6 +53,14 @@ platform :ios do
       ipa: './build/release/ios/Koikoi-iOS.ipa'
     )
   end
+  desc 'Fail unless an editable App Store version exists (used by CI to skip metadata delivery)'
+  lane :check_editable_version do
+    setup_app_store_connect_api_key
+    unless has_editable_version?(platform: Spaceship::ConnectAPI::Platform::IOS)
+      UI.user_error!('No editable App Store version available')
+    end
+  end
+
   desc 'Update App Store metadata'
   lane :deliver_metadata do
     setup_app_store_connect_api_key
@@ -164,6 +172,14 @@ platform :mac do
       run_precheck_before_submit: false
     )
   end
+  desc 'Fail unless an editable App Store version exists (used by CI to skip metadata delivery)'
+  lane :check_editable_version do
+    setup_app_store_connect_api_key
+    unless has_editable_version?(platform: Spaceship::ConnectAPI::Platform::MAC_OS)
+      UI.user_error!('No editable App Store version available')
+    end
+  end
+
   desc 'Update App Store metadata'
   lane :deliver_metadata do
     setup_app_store_connect_api_key
@@ -240,6 +256,28 @@ platform :visionos do
     )
   end
 
+  desc 'Fail unless an editable App Store version exists (used by CI to skip metadata delivery)'
+  lane :check_editable_version do
+    setup_app_store_connect_api_key
+    unless has_editable_version?(platform: Spaceship::ConnectAPI::Platform::VISION_OS)
+      UI.user_error!('No editable App Store version available')
+    end
+  end
+
+  desc 'Update App Store metadata'
+  lane :deliver_metadata do
+    setup_app_store_connect_api_key
+    deliver(
+      platform: 'xros',
+      force: true,
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      run_precheck_before_submit: false,
+      metadata_path: './fastlane/metadata',
+      app_identifier: 'io.ngs.Koikoi'
+    )
+  end
+
   desc 'Upload App Store screenshots from fastlane/screenshots/visionos'
   lane :deliver_screenshots do
     setup_app_store_connect_api_key
@@ -254,6 +292,36 @@ platform :visionos do
       screenshots_path: './fastlane/screenshots/visionos',
       app_identifier: 'io.ngs.Koikoi'
     )
+  end
+end
+
+# 「提出準備中」などメタデータを編集できる状態のバージョンが App Store Connect にあるか。
+# 審査中・配信中しか無いときに deliver を走らせると失敗するため、CI はこれで先に判定する。
+desc 'Check if an editable App Store version exists for the given platform'
+private_lane :has_editable_version? do |options|
+  require 'spaceship'
+
+  api_key = Actions.lane_context[SharedValues::APP_STORE_CONNECT_API_KEY]
+  UI.user_error!('App Store Connect API key is not configured') if api_key.nil?
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: api_key)
+
+  app = Spaceship::ConnectAPI::App.find('io.ngs.Koikoi')
+  UI.user_error!('App not found: io.ngs.Koikoi') if app.nil?
+
+  edit_version = app.get_edit_app_store_version(platform: options[:platform])
+  if edit_version.nil?
+    UI.message("No edit version found for #{options[:platform]}")
+    next false
+  end
+
+  editable_states = %w[PREPARE_FOR_SUBMISSION DEVELOPER_REJECTED REJECTED METADATA_REJECTED]
+  state = edit_version.app_store_state
+  if editable_states.include?(state)
+    UI.success("Found editable version #{edit_version.version_string} (state: #{state})")
+    true
+  else
+    UI.message("Version #{edit_version.version_string} is not editable (state: #{state})")
+    false
   end
 end
 

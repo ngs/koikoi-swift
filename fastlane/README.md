@@ -50,6 +50,14 @@ Build app for release
 
 Publish app to App Store
 
+### ios check_editable_version
+
+```sh
+[bundle exec] fastlane ios check_editable_version
+```
+
+Fail unless an editable App Store version exists (used by CI to skip metadata delivery)
+
 ### ios deliver_metadata
 
 ```sh
@@ -57,6 +65,14 @@ Publish app to App Store
 ```
 
 Update App Store metadata
+
+### ios deliver_screenshots
+
+```sh
+[bundle exec] fastlane ios deliver_screenshots
+```
+
+Upload App Store screenshots from fastlane/screenshots/ios
 
 ----
 
@@ -95,6 +111,14 @@ Build app for macOS release
 
 Publish macOS app to App Store
 
+### mac check_editable_version
+
+```sh
+[bundle exec] fastlane mac check_editable_version
+```
+
+Fail unless an editable App Store version exists (used by CI to skip metadata delivery)
+
 ### mac deliver_metadata
 
 ```sh
@@ -102,6 +126,14 @@ Publish macOS app to App Store
 ```
 
 Update App Store metadata
+
+### mac deliver_screenshots
+
+```sh
+[bundle exec] fastlane mac deliver_screenshots
+```
+
+Upload App Store screenshots from fastlane/screenshots/mac
 
 ----
 
@@ -131,6 +163,30 @@ Build app for visionOS release
 ```
 
 Publish visionOS app to App Store
+
+### visionos check_editable_version
+
+```sh
+[bundle exec] fastlane visionos check_editable_version
+```
+
+Fail unless an editable App Store version exists (used by CI to skip metadata delivery)
+
+### visionos deliver_metadata
+
+```sh
+[bundle exec] fastlane visionos deliver_metadata
+```
+
+Update App Store metadata
+
+### visionos deliver_screenshots
+
+```sh
+[bundle exec] fastlane visionos deliver_screenshots
+```
+
+Upload App Store screenshots from fastlane/screenshots/visionos
 
 ----
 
