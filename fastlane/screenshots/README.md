@@ -18,6 +18,10 @@ platform specific (landscape three-column layout on iPhone and iPad, the translu
 window over the desktop with the round-end dialog on Mac, the spatial board seen from
 the room on Apple Vision Pro).
 
+App Store Connect rejects screenshots that carry an alpha channel, and both simulator and
+window captures produce RGBA files. Convert every finished PNG to RGB before committing
+it.
+
 ## Deterministic game states
 
 Playing a game by hand on every device is not repeatable, so the shots are taken from
@@ -86,10 +90,25 @@ so rotate the capture afterwards with `sips -r 270 <file>` to get 2868×1320.
 **Mac.** The Debug app refuses to launch from a temporary directory, so copy the bundle
 somewhere normal first (`~/Applications/…`). The fixtures go in the sandbox container at
 `~/Library/Containers/io.ngs.Koikoi/Data/tmp/fixtures/`. Launch with `open -na <app>
---args …`, size the window with System Events, capture the window rectangle with
-`screencapture -x -R`, and scale to 2880×1800 with `sips -z 1800 2880`. On a display
-whose usable height is under 900pt, use a 16:10 window (these shots were taken at
-1388×868pt on a 2× display and scaled up).
+--args …` and size the window to 1440×900pt, which is exactly 2880×1800px on a 2×
+display, so nothing has to be scaled.
+
+Four details make the difference between a usable shot and a broken one:
+
+- Capture the window, not a screen rectangle: `screencapture -x -o -w <file>` followed by
+  a click in the middle of the window (`cliclick c:<x>,<y>`). A region capture picks up
+  whatever floats above the window, and a notification banner in the corner will end up
+  in the screenshot. Window captures come back with transparent rounded corners, so
+  flatten them onto black before uploading.
+- Quit any previous copy first. Two instances mean two windows, and the resize then
+  lands on the wrong one. Kill by path (`pgrep -f ~/Applications/…`), never `pkill -x
+  Koikoi`, which would also kill an app of the same name running in a simulator.
+- Address the app by process id (`first process whose unix id is …`) and the window by
+  `first window whose subrole is "AXStandardWindow"`. A simulator can host a process with
+  the same name, and the app can briefly keep a leftover ghost window.
+- The usable screen height is not always 900pt. Read the window size back after resizing
+  and, if it came out smaller, crop the capture to 16:10 and scale it up rather than
+  stretching it.
 
 Back up `~/Library/Containers/io.ngs.Koikoi/Data/Library/Application
 Support/Koikoi/current.koikoi` and `defaults read io.ngs.Koikoi` first: the app is the
@@ -98,5 +117,10 @@ frame preference.
 
 **Apple Vision Pro.** Same simulator flow as iOS. The simulator camera cannot be moved
 from a script, so the board sits small inside the simulated room. Shots 1 to 4 are a
-2400×1350 crop centred on the board, scaled back to 3840×2160; shot 5 is the untouched
+2000×1125 crop centred on the board, scaled back to 3840×2160; the setup shot takes its
+crop 177px higher because the glass panel floats above the table. Shot 5 is the untouched
 frame that shows the whole room.
+
+The Night shot passes `-koikoi.translucentWindow NO`. visionOS shows the felt translucent
+by default, which leaves the palettes nearly indistinguishable; with translucency off the
+table reads as a solid indigo surface in the room.
