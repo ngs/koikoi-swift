@@ -103,7 +103,8 @@ struct CardBack: View {
 
 /// 獲得札の詳細（go-koikoi の writeCapturedDetail 相当）。
 /// 種類別のグループ（枚数付き）で並べ、必要ならリーチも示す。
-struct CapturedDetail: View {
+/// visionOS の空間ボードでは卓に伏せた attachment としてそのまま使うため公開する。
+public struct CapturedDetail: View {
     @Environment(\.koikoiPalette)
     private var palette
     let cards: [Card]
@@ -114,7 +115,7 @@ struct CapturedDetail: View {
     /// 縦積みのときの 1 行あたりの枚数（列の幅から決め打ちする）。
     let columns: Int
 
-    init(
+    public init(
         cards: [Card], reaches: [YakuReach] = [], cardWidth: CGFloat,
         axis: Axis = .horizontal, columns: Int = 3
     ) {
@@ -136,7 +137,7 @@ struct CapturedDetail: View {
         Group(type: .tanzaku), Group(type: .kasu)
     ]
 
-    var body: some View {
+    public var body: some View {
         if axis == .vertical {
             verticalBody
         } else {

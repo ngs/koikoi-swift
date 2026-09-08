@@ -12,7 +12,7 @@ struct KoikoiApp: App {
         }
         .windowStyle(.volumetric)
         .volumeWorldAlignment(.gravityAligned)
-        .defaultSize(width: 0.9, height: 0.5, depth: 0.8, in: .meters)
+        .defaultSize(width: 1.5, height: 0.8, depth: 1.1, in: .meters)
         // 起動時は目の高さではなく、正面やや下（卓上の高さ）に出して見下ろせるようにする
         .defaultWindowPlacement { _, _ in
             WindowPlacement(.utilityPanel)

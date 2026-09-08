@@ -42,11 +42,25 @@ SPM のテストは `Tests/KoikoiCoreTests/`・`Tests/KoikoiAITests/`（`swift t
 無ければ対局設定画面から始める（文書ブラウザ / `DocumentGroup` は使わない = ユーザーに
 ファイルを意識させない）。保存の中身はシードと全指し手の `GameRecord` で、復元はリプレイによる。
 「対局をやめる」で保存は破棄される。`KoikoiGameDocument` と `UTType.koikoiGame` は
-visionOS の書き出し / 読み込み（fileExporter / fileImporter）用に残している。
+visionOS の読み込み（対局設定パネルの「Open Saved Game」= fileImporter）用に残している。
 
 ### visionOS
 
 visionOS は平面ウィンドウ移植ではなく **OS の特徴を最大限活かす**方針: volumetric window / RealityKit で札を空間に置き、視線 + ピンチで選択、没入空間（和室・座卓）を提供する。visionOS 固有コードは `Sources/App/` 内で `#if os(visionOS)` または専用ディレクトリに置く。
+
+盤面（`Sources/App/SpatialBoardView.swift`）の構成は、札 = RealityKit のエンティティ、
+情報表示 = 2D 版と同じ SwiftUI 部品の RealityView attachment。位置はすべて
+`SpatialLayout`（メートル）に集約する。自分の手札は卓から 80 度起こして手前に浮かべ、
+獲得札は種類別のパネル（`CapturedDetail`）を卓に伏せて置き、役とリーチ
+（`BoardYakuPanel`）は右、スコアボードと対局終了ボタン（`ScoreboardStrip`）は左に
+立てる。ダイアログは立てた手札より手前に出す。獲得済みの札は 3D では持たず、
+飛来アニメーションが終わったところでエンティティを引き上げてパネルに引き継ぐ。
+
+役パネルとスコアボードは下端の白いバーを掴んで好きな場所へ動かせる。位置は
+`SpatialPanelOffsets`（`koikoi.spatial.panelOffsets`）に既定位置からのオフセットとして
+保存し、対局設定パネルの「Reset Panel Positions」で捨てる。当たり判定はパネル本体では
+なくバーに付ける（本体に付けると中のボタンが押せなくなる）。タップとドラッグは
+1 本の `DragGesture` で捌く（別々に付けるとドラッグ側が発火しない）。
 
 ### カードアセット
 

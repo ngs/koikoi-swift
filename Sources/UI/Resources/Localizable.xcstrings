@@ -276,6 +276,17 @@
         }
       }
     },
+    "Choose a field card to take" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取る場札を選んでください"
+          }
+        }
+      }
+    },
     "Choose a field card to take (Esc to cancel)" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1130,6 +1141,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "赤短"
+          }
+        }
+      }
+    },
+    "Reset Panel Positions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パネルの位置をリセット"
           }
         }
       }
