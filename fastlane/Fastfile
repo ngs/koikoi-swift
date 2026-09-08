@@ -75,6 +75,18 @@ platform :ios do
       app_rating_config_path: './fastlane/metadata/app_store_rating_config.json',
       app_identifier: 'io.ngs.Koikoi'
     )
+    upload_privacy_details
+  end
+
+  # このアクションは Apple ID でしか認証できない（API キー非対応）ため、
+  # FASTLANE_USER が無い CI では飛ばして手元で実行する。
+  desc 'Upload app privacy details (requires FASTLANE_USER; skipped when unset)'
+  lane :upload_privacy_details do
+    if ENV['FASTLANE_USER'].to_s.empty?
+      UI.important('FASTLANE_USER is not set; skipping app privacy details upload')
+      next
+    end
+
     upload_app_privacy_details_to_app_store(
       app_identifier: 'io.ngs.Koikoi',
       json_path: './fastlane/app_privacy_details.json',

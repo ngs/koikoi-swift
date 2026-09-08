@@ -66,6 +66,14 @@ Fail unless an editable App Store version exists (used by CI to skip metadata de
 
 Update App Store metadata
 
+### ios upload_privacy_details
+
+```sh
+[bundle exec] fastlane ios upload_privacy_details
+```
+
+Upload app privacy details (requires FASTLANE_USER; skipped when unset)
+
 ### ios deliver_screenshots
 
 ```sh
