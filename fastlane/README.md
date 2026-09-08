@@ -66,6 +66,14 @@ Fail unless an editable App Store version exists (used by CI to skip metadata de
 
 Update App Store metadata
 
+### ios declare_content_rights
+
+```sh
+[bundle exec] fastlane ios declare_content_rights
+```
+
+Declare that the app uses licensed third-party content (Content Rights Information)
+
 ### ios upload_privacy_details
 
 ```sh

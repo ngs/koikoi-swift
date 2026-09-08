@@ -76,6 +76,25 @@ platform :ios do
       app_identifier: 'io.ngs.Koikoi'
     )
     upload_privacy_details
+    declare_content_rights
+  end
+
+  # 審査提出に必須の Content Rights（App Information）。deliver は submit_for_review の
+  # ときにしか送らないため、メタデータ更新時にアプリ属性として直接書く。
+  # 札の絵は購入したストック素材（第三者コンテンツ・利用権あり）なので「含む」を宣言する。
+  desc 'Declare that the app uses licensed third-party content (Content Rights Information)'
+  lane :declare_content_rights do
+    require 'spaceship'
+    api_key = Actions.lane_context[SharedValues::APP_STORE_CONNECT_API_KEY]
+    UI.user_error!('App Store Connect API key is not configured') if api_key.nil?
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: api_key)
+
+    app = Spaceship::ConnectAPI::App.find('io.ngs.Koikoi')
+    UI.user_error!('App not found: io.ngs.Koikoi') if app.nil?
+    app.update(attributes: {
+      contentRightsDeclaration: Spaceship::ConnectAPI::App::ContentRightsDeclaration::USES_THIRD_PARTY_CONTENT
+    })
+    UI.success('Content rights declaration set to USES_THIRD_PARTY_CONTENT')
   end
 
   # このアクションは Apple ID でしか認証できない（API キー非対応）ため、
