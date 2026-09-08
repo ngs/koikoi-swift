@@ -20,6 +20,8 @@
   "lootBox": false,
   "messagingAndChat": false,
   "parentalControls": false,
+  "socialMedia": false,
+  "socialMediaAgeRestricted": false,
   "unrestrictedWebAccess": false,
   "userGeneratedContent": false,
 
