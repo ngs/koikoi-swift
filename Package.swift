@@ -27,8 +27,7 @@ let package = Package(
                 .swiftLanguageMode(.v6),
             ]
         ),
-        // Opponent: determinized ISMCTS search over KoikoiCore plus an
-        // on-device FoundationModels persona (table talk, koikoi rationale).
+        // Opponent: determinized ISMCTS search over KoikoiCore.
         .target(
             name: "KoikoiAI",
             dependencies: [

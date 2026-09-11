@@ -7,8 +7,8 @@
 # (WideLayoutMetrics.phone, isLandscapePhone) and the test-only hooks on
 # GameViewModel are reported as unused when scanning the macOS destination;
 # treat those as known false positives. SpatialBoardView is entirely inside
-# `#if os(visionOS)`, so its imports (and anything only it reaches, such as
-# OpponentPersona) can be reported as unused for the same reason.
+# `#if os(visionOS)`, so its imports (and anything only it reaches) can be
+# reported as unused for the same reason.
 project: Koikoi.xcworkspace
 schemes:
   - Koikoi

@@ -11,8 +11,8 @@
 ### Stack（tides-swift = Shiomi と同じ規約）
 
 - **Language**: Swift 6 (strict concurrency)
-- **Frameworks**: SwiftUI, RealityKit (visionOS), FoundationModels, SwiftData
-- **Deployment targets**: iOS 26.0 / macOS 26.0 / visionOS 26.0（FoundationModels 前提）
+- **Frameworks**: SwiftUI, RealityKit (visionOS), SwiftData
+- **Deployment targets**: iOS 26.0 / macOS 26.0 / visionOS 26.0
 - **Architecture**: MVVM over local SPM packages
 - **Project generation**: Tuist (`Project.swift`) + Swift Package Manager (`Package.swift`)
 - **Code quality**: SwiftLint / Periphery
@@ -25,7 +25,7 @@
 | Module | Path | Contents |
 |---|---|---|
 | `KoikoiCore` | `Sources/Core/` | 札定義・役判定・ラウンド/対局の状態機械。**Foundation のみ・UI フレームワーク禁止** |
-| `KoikoiAI` | `Sources/AI/` | 対戦相手。determinized ISMCTS 探索（打筋の決定）+ FoundationModels のオンデバイス人格（台詞・こいこい判断の説明）。**LLM 不可用時も打筋は探索のみで成立する**（クラウド LLM は使わない = 従量課金ゼロ・オフライン動作） |
+| `KoikoiAI` | `Sources/AI/` | 対戦相手。determinized ISMCTS 探索で打筋を決める。**探索のみで完結する**（LLM は使わない = 従量課金ゼロ・オフライン動作） |
 | `KoikoiUI` | `Sources/UI/` | SwiftUI ビューとビューモデル（全プラットフォーム共有） |
 
 | Tuist target | Product | Sources | Platforms |
@@ -97,4 +97,3 @@ KoikoiUI 内のテキストは必ず `bundle: .module` を渡す。翻訳の抜�
 - ルール変更・役判定の修正は必ず対応するテストとセットで（go-koikoi のテストを移植したものが基準線）
 - ソース内に日本語の文字列リテラルを足さない（表示文言は英語キー + String Catalog の日本語訳）
 - 非自明な変更は master 直 push せず feature branch → PR → レビュー経由
-- FoundationModels は `SystemLanguageModel.default.availability` を確認し、不可用時は台詞なしで進行（ゲーム進行を LLM 応答でブロックしない）
