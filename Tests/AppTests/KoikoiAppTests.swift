@@ -156,7 +156,7 @@ final class KoikoiAppTests: XCTestCase {
         }
     }
 
-    /// アプリカタログ（Assets.xcassets/Cards）に 48 枚全ての札画像が
+    /// アプリカタログ（KoikoiArtwork.xcassets/Cards）に 48 枚全ての札画像が
     /// コンパイルされている。
     func testAllCardAssetsCompiledIntoApp() {
         for card in Card.all {

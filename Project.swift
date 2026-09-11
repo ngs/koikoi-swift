@@ -85,7 +85,12 @@ let project = Project(
             sources: ["Sources/App/**"],
             // entitlements は resources グロブから外す（バンドルにコピーされ tuist generate が警告する）
             resources: [
-                .glob(pattern: "Resources/**", excluding: ["Resources/Koikoi.entitlements"])
+                .glob(pattern: "Resources/**", excluding: ["Resources/Koikoi.entitlements"]),
+                // 絵柄（札・アイコン）は MIT の適用外にするため private submodule
+                // Assets/koikoi-swift-assets へ切り出してある。submodule 未取得だと
+                // このグロブが空になり、アイコンと札画像のないアプリが生成される。
+                .glob(pattern: "Assets/koikoi-swift-assets/KoikoiArtwork.xcassets/**"),
+                .glob(pattern: "Assets/koikoi-swift-assets/AppIcon.icon/**")
             ],
             entitlements: "Resources/Koikoi.entitlements",
             scripts: [
@@ -100,7 +105,8 @@ let project = Project(
                 .package(product: "KoikoiAI"),
                 .package(product: "KoikoiUI")
             ],
-            // iOS / macOS のアイコンは Resources/AppIcon.icon（Icon Composer）から Xcode が生成する。
+            // iOS / macOS のアイコンは Assets/koikoi-swift-assets/AppIcon.icon（Icon Composer）
+            // から Xcode が生成する。
             // visionOS は Icon Composer 非対応で 3 レイヤーの solidimagestack が必須のため別アセットを使う
             // （未設定だと CFBundleIcons.CFBundlePrimaryIcon 欠落でアップロードが 90970 で失敗する）。
             // Tuist がターゲットへ無条件の ASSETCATALOG_COMPILER_APPICON_NAME を自動生成するため、
