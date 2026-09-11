@@ -4,8 +4,13 @@
 （`Dropbox/Codes/Koikoi/Assets/Sprites/Cards/{月:02d}-{連番:02d}.jpg`）を
 Illustrator の Image Trace でベクター化したものを正とする。
 
-リポジトリにコミットされるのは **`Resources/Assets.xcassets/Cards/` の imageset のみ**
+コミット対象は **`Assets/koikoi-swift-assets/KoikoiArtwork.xcassets/Cards/` の imageset のみ**
 （preserves-vector-representation 付き SVG）。中間生成物は `/tmp` に置き、コミットしない。
+
+絵柄は MIT 適用外のため、本体ではなく private submodule
+（`ngs/koikoi-swift-assets` → `Assets/koikoi-swift-assets`）に置く。**再生成すると
+submodule の作業ツリーが変わるので、commit / push は submodule 側で行い、本体側では
+submodule のポインタ更新を別途 commit する。**
 
 ## パイプライン（Scripts/trace_cards.sh が一括実行）
 
@@ -19,7 +24,7 @@ Illustrator の Image Trace でベクター化したものを正とする。
 /tmp/koikoi_traced/{id:02d}_{slug}.svg
   │  Scripts/cards_to_xcassets.sh  … imageset 化（Cards フォルダだけを再生成）
   ▼
-Resources/Assets.xcassets/Cards/{id:02d}_{slug}.imageset   ← コミット対象
+Assets/koikoi-swift-assets/KoikoiArtwork.xcassets/Cards/{id:02d}_{slug}.imageset   ← コミット対象（submodule 側）
 ```
 
 - 札 ID (0–47) と並びは go-koikoi の `AllCards` と同一。`id = (月-1)×4 + (連番-1)`
@@ -33,5 +38,6 @@ Resources/Assets.xcassets/Cards/{id:02d}_{slug}.imageset   ← コミット対�
 Scripts/trace_cards.sh   # 前処理 + Illustrator トレース + xcassets 反映まで一括
 ```
 
-前提: Adobe Illustrator、`python3` + Pillow + NumPy（`pip3 install pillow numpy`）。
+前提: Adobe Illustrator、`python3` + Pillow + NumPy（`pip3 install pillow numpy`）、
+および絵柄 submodule の取得（`git submodule update --init`）。
 原画の場所は `KOIKOI_SPRITES_DIR` で上書きできる。

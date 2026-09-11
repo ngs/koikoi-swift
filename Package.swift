@@ -41,7 +41,8 @@ let package = Package(
             ]
         ),
         // SwiftUI views and view models shared by every platform.
-        // 札画像はアプリ側 Resources/Assets.xcassets/Cards（メインバンドル）にある。
+        // 札画像は submodule の Assets/koikoi-swift-assets/KoikoiArtwork.xcassets/Cards
+        // にあり、アプリターゲットがメインバンドルへ取り込む。
         .target(
             name: "KoikoiUI",
             dependencies: [
