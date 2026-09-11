@@ -16,10 +16,11 @@ jobs:
       - uses: actions/checkout@v6
         with:
           # 絵柄は private submodule（ngs/koikoi-swift-assets）にある。
-          # 既定の GITHUB_TOKEN では別リポジトリを引けないため、そのリポジトリを
-          # 読める PAT を secrets.ASSETS_REPO_TOKEN に設定しておく必要がある。
+          # 既定の GITHUB_TOKEN では別リポジトリを引けないため、その
+          # リポジトリの read-only デプロイキーを secrets.ASSETS_DEPLOY_KEY
+          # から渡して SSH で取得する（.gitmodules の SSH URL をそのまま使う）。
           submodules: recursive
-          token: ${{ secrets.ASSETS_REPO_TOKEN || github.token }}
+          ssh-key: ${{ secrets.ASSETS_DEPLOY_KEY }}
       - name: Select Xcode
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
       - name: Run tests with coverage
@@ -54,10 +55,11 @@ jobs:
       - uses: actions/checkout@v6
         with:
           # 絵柄は private submodule（ngs/koikoi-swift-assets）にある。
-          # 既定の GITHUB_TOKEN では別リポジトリを引けないため、そのリポジトリを
-          # 読める PAT を secrets.ASSETS_REPO_TOKEN に設定しておく必要がある。
+          # 既定の GITHUB_TOKEN では別リポジトリを引けないため、その
+          # リポジトリの read-only デプロイキーを secrets.ASSETS_DEPLOY_KEY
+          # から渡して SSH で取得する（.gitmodules の SSH URL をそのまま使う）。
           submodules: recursive
-          token: ${{ secrets.ASSETS_REPO_TOKEN || github.token }}
+          ssh-key: ${{ secrets.ASSETS_DEPLOY_KEY }}
       - name: Select Xcode
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
       - name: Install Tuist

@@ -86,7 +86,8 @@ visionOS は平面ウィンドウ移植ではなく **OS の特徴を最大限�
 グロブで足している。submodule 未取得だとグロブが空になり、札画像もアイコンも無い
 アプリが生成される（プレースホルダーは用意していない）。`swift test` は絵柄を必要と
 しないので submodule 無しでも通る。CI は `submodules: recursive` で取得し、private
-リポジトリを読める PAT を `secrets.ASSETS_REPO_TOKEN` から渡す。
+リポジトリの read-only デプロイキーを `secrets.ASSETS_DEPLOY_KEY` から
+`actions/checkout` の `ssh-key` に渡す（`.gitmodules` の SSH URL をそのまま使う）。
 
 本体に残る画像は `fastlane/screenshots/` の App Store スクリーンショットのみ
 （生成物なので submodule には移さないが、ライセンス上は同じく MIT 適用外）。
