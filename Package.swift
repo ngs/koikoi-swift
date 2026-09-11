@@ -27,8 +27,7 @@ let package = Package(
                 .swiftLanguageMode(.v6),
             ]
         ),
-        // Opponent: determinized ISMCTS search over KoikoiCore plus an
-        // on-device FoundationModels persona (table talk, koikoi rationale).
+        // Opponent: determinized ISMCTS search over KoikoiCore.
         .target(
             name: "KoikoiAI",
             dependencies: [
@@ -41,7 +40,8 @@ let package = Package(
             ]
         ),
         // SwiftUI views and view models shared by every platform.
-        // 札画像はアプリ側 Resources/Assets.xcassets/Cards（メインバンドル）にある。
+        // 札画像は submodule の Assets/koikoi-swift-assets/KoikoiArtwork.xcassets/Cards
+        // にあり、アプリターゲットがメインバンドルへ取り込む。
         .target(
             name: "KoikoiUI",
             dependencies: [
