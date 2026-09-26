@@ -526,8 +526,6 @@ private final class BoardScene {
     private struct Timeline {
         var legs: [Int: [(Double, Transform)]] = [:]
         var spawns: [Int: SIMD3<Float>] = [:]
-        var consumed: Set<Int> = []
-        var clock = 0.0
     }
 
     /// attachment のエンティティを盤に取り込み、指定の位置・傾きに保つ。
@@ -698,64 +696,68 @@ private final class BoardScene {
         let fieldToCaptured = finals.keys.filter {
             oldZones[$0] == .field && zones[$0] == .captured
         }
+        let newlyCaptured = Set(finals.keys.filter {
+            zones[$0] == .captured && oldZones[$0] != .captured
+        })
+        var planner = SpatialCapturePlanner(
+            newlyCaptured: newlyCaptured, fieldToCaptured: fieldToCaptured)
+        let plan = { (mover: Int) in
+            guard finals[mover] != nil else { return }
+            planner.plan(mover) { self.cards[$0] != nil && finals[$0] != nil }
+        }
 
         // 1. 自分の手札から出した札
         for id in finals.keys.sorted()
         where oldZones[id] == .hand && zones[id] != .hand {
-            plan(id, into: &timeline, finals: finals, fieldToCaptured: fieldToCaptured)
+            plan(id)
         }
         // 2. 相手の手元から出た札（裏札が減ったときの出現札。獲得ペアのある札を優先）
         var deckAppears = appears
         if opponentPlayed,
-            let played = deckAppears.first(where: {
-                capturePartner(of: $0, in: fieldToCaptured, consumed: timeline.consumed) != nil
-            }) ?? deckAppears.first {
+            let played = deckAppears.first(where: { planner.partner(of: $0) != nil })
+                ?? deckAppears.first {
             timeline.spawns[played] = SpatialLayout.opponentHandSpot
-            plan(played, into: &timeline, finals: finals, fieldToCaptured: fieldToCaptured)
+            plan(played)
             deckAppears.removeAll { $0 == played }
         }
         // 3. 山札から現れた札
         for id in deckAppears {
             timeline.spawns[id] = SpatialLayout.deckTop
-            plan(id, into: &timeline, finals: finals, fieldToCaptured: fieldToCaptured)
+            plan(id)
         }
         // 4. 山札の上に提示されていた引き札の解決（場へ置く/獲得）
         for id in finals.keys.sorted()
         where oldZones[id] == .drawn && zones[id] != .drawn {
-            plan(id, into: &timeline, finals: finals, fieldToCaptured: fieldToCaptured)
+            plan(id)
         }
+
+        schedule(planner, into: &timeline, finals: finals)
         return timeline
     }
 
-    /// 1 手分の移動を予約する。獲得ペアがあれば相手の場札まで飛んで
-    /// がっちゃんこし、2 枚同時に獲得パネルへ移動する。
-    private func plan(
-        _ mover: Int, into timeline: inout Timeline,
-        finals: [Int: Transform], fieldToCaptured: [Int]
+    /// Turns the planner's steps into movement legs. A card with a capture mate flies to
+    /// that field card, meets it, and both move to the captured panel together.
+    private func schedule(
+        _ planner: SpatialCapturePlanner, into timeline: inout Timeline,
+        finals: [Int: Transform]
     ) {
-        guard let final = finals[mover] else { return }
-        if let mate = capturePartner(of: mover, in: fieldToCaptured, consumed: timeline.consumed),
-            let mateEntity = cards[mate], let mateFinal = finals[mate] {
-            timeline.consumed.insert(mate)
-            let meet = Transform(translation: mateEntity.position + [0, 0.008, 0])
-            timeline.legs[mover] = [
-                (timeline.clock, meet),
-                (timeline.clock + 0.55, final)
-            ]
-            timeline.legs[mate] = [(timeline.clock + 0.55, mateFinal)]
-            timeline.clock += 1.0
-        } else {
-            timeline.legs[mover] = [(timeline.clock, final)]
-            timeline.clock += 0.5
+        for (mover, step) in planner.steps {
+            guard let final = finals[mover] else { continue }
+            switch step {
+            case let .meet(mate, start):
+                guard let mateEntity = cards[mate] else { continue }
+                let meet = Transform(translation: mateEntity.position + [0, 0.008, 0])
+                timeline.legs[mover] = [
+                    (start, meet),
+                    (start + SpatialCapturePlanner.meetDuration, final)
+                ]
+            case let .direct(start):
+                timeline.legs[mover] = [(start, final)]
+            }
         }
-    }
-
-    private func capturePartner(
-        of id: Int, in fieldToCaptured: [Int], consumed: Set<Int>
-    ) -> Int? {
-        guard zones[id] == .captured, let month = Card.card(id: id)?.month else { return nil }
-        return fieldToCaptured.first {
-            !consumed.contains($0) && Card.card(id: $0)?.month == month
+        for (mate, start) in planner.landings {
+            guard let mateFinal = finals[mate] else { continue }
+            timeline.legs[mate] = [(start, mateFinal)]
         }
     }
 
