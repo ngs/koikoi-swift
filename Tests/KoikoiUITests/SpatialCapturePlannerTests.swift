@@ -32,6 +32,36 @@ import Testing
         planner.plan(sakeCup) { _ in true }
 
         #expect(Set(planner.landings.keys) == Set(field))
+        // The extras leave together with the pair
+        #expect(planner.landings.values.allSatisfy { $0 == SpatialCapturePlanner.meetDuration })
+        if case .meet(let mate, let start) = planner.steps[sakeCup] {
+            #expect(field.contains(mate))
+            #expect(start == 0)
+        } else {
+            Issue.record("the mover should meet one of the field cards")
+        }
+    }
+
+    /// A mate that is not drawn on the board cannot be met: the mover goes direct.
+    @Test func unavailableMateFallsBackToDirect() {
+        var planner = SpatialCapturePlanner(
+            newlyCaptured: [sakeCup, blueRibbon], fieldToCaptured: [blueRibbon])
+        planner.plan(sakeCup) { _ in false }
+
+        #expect(planner.steps[sakeCup] == .direct(at: 0))
+        #expect(planner.landings.isEmpty)
+        #expect(planner.clock == SpatialCapturePlanner.directStepDuration)
+    }
+
+    /// Extras that are not drawn on the board are not flown in from elsewhere.
+    @Test func unavailableExtrasGetNoLanding() {
+        let field = [blueRibbon, chaff1, chaff2]
+        var planner = SpatialCapturePlanner(
+            newlyCaptured: Set(field + [sakeCup]), fieldToCaptured: field)
+        planner.plan(sakeCup) { $0 != chaff2 }
+
+        #expect(!planner.landings.keys.contains(chaff2))
+        #expect(planner.landings.count == 2)
     }
 
     /// Hand card and drawn card of the same month each take one: each pairs with its own mate.

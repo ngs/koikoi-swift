@@ -73,7 +73,7 @@ public struct SpatialCapturePlanner: Equatable, Sendable {
             landings[mate] = clock + Self.meetDuration
             // A triple match takes every field card of the month with one mover. Field cards
             // not left for a later mover of the same month travel with this pair.
-            for extra in unclaimedExtras(sameMonthAs: mover) {
+            for extra in unclaimedExtras(sameMonthAs: mover) where mateAvailable(extra) {
                 landings[extra] = clock + Self.meetDuration
             }
             clock += Self.captureStepDuration
