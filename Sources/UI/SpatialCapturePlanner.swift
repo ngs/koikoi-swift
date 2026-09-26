@@ -53,12 +53,29 @@ public struct SpatialCapturePlanner: Equatable, Sendable {
         }
     }
 
+    /// Unpaired same-month field cards beyond what later movers of that month will pair with.
+    private func unclaimedExtras(sameMonthAs mover: Int) -> [Int] {
+        guard let month = Card.card(id: mover)?.month else { return [] }
+        let sameMonth = { (id: Int) in Card.card(id: id)?.month == month }
+        let fieldSet = Set(fieldToCaptured)
+        let laterMovers = newlyCaptured.filter {
+            $0 != mover && sameMonth($0) && !fieldSet.contains($0) && steps[$0] == nil
+        }
+        let unpaired = fieldToCaptured.filter { sameMonth($0) && !consumed.contains($0) }
+        return Array(unpaired.dropFirst(laterMovers.count))
+    }
+
     /// Plans one moving card.
     /// - Parameter mateAvailable: Whether a mate candidate is drawn on the board and can be met.
     public mutating func plan(_ mover: Int, mateAvailable: (Int) -> Bool) {
         if let mate = partner(of: mover), mateAvailable(mate) {
             steps[mover] = .meet(mate: mate, at: clock)
             landings[mate] = clock + Self.meetDuration
+            // A triple match takes every field card of the month with one mover. Field cards
+            // not left for a later mover of the same month travel with this pair.
+            for extra in unclaimedExtras(sameMonthAs: mover) {
+                landings[extra] = clock + Self.meetDuration
+            }
             clock += Self.captureStepDuration
         } else {
             steps[mover] = .direct(at: clock)

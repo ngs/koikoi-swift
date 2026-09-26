@@ -770,7 +770,10 @@ private final class BoardScene {
     ) {
         for (id, final) in finals {
             let pose = poses[id]
-            let legs = timeline.legs[id]
+            // A captured card still drawn on the board but given no flight (a capture the
+            // timeline did not pair) flies straight to the panel instead of staying behind
+            let strayCapture = pose == nil && cards[id] != nil && !retiring.contains(id)
+            let legs = timeline.legs[id] ?? (strayCapture ? [(0, final)] : nil)
             // 獲得済みで飛来の予約も無い札は獲得パネルが引き受ける
             guard pose != nil || legs != nil, let card = Card.card(id: id) else { continue }
             let entity: ModelEntity
