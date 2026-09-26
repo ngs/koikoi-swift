@@ -34,7 +34,7 @@ import Testing
         #expect(Set(planner.landings.keys) == Set(field))
         // The extras leave together with the pair
         #expect(planner.landings.values.allSatisfy { $0 == SpatialCapturePlanner.meetDuration })
-        if case .meet(let mate, let start) = planner.steps[sakeCup] {
+        if case let .meet(mate, start) = planner.steps[sakeCup] {
             #expect(field.contains(mate))
             #expect(start == 0)
         } else {
