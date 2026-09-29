@@ -1,17 +1,24 @@
 #!/bin/bash
-# iOS / macOS のアプリアイコンは Resources/AppIcon.icon（Icon Composer で編集）から Xcode が生成する。
+# iOS / macOS のアプリアイコンは Assets/koikoi-swift-assets/AppIcon.icon（Icon Composer で編集）
+# から Xcode が生成する。絵柄は private submodule にあるため、このスクリプトは submodule を
+# 取得している環境でのみ動く（出力先も submodule の作業ツリー内）。
 # このスクリプトは Icon Composer が扱えない残りを生成する:
 #   - visionOS 用 AppIconVision.solidimagestack（前面・中面は AppIcon.icon/Assets の SVG、背面は無地）
-#   - アプリ内表示用 AppIconArtwork.imageset（Resources/icon-template.svg = 3 層を合成した絵柄）
+#   - アプリ内表示用 AppIconArtwork.imageset（submodule の icon-template.svg = 3 層を合成した絵柄）
 # レンダリングは Scripts/render_icon.swift（AppKit）で行う（macOS 標準ツールのみ使用）。
 # 絵柄を差し替えるときは AppIcon.icon/Assets の各層と icon-template.svg を揃えて更新すること。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SVG="$REPO_ROOT/Resources/icon-template.svg"
-ICON_ASSETS="$REPO_ROOT/Resources/AppIcon.icon/Assets"
-VISION_OUT="$REPO_ROOT/Resources/Assets.xcassets/AppIconVision.solidimagestack"
+ASSETS_ROOT="$REPO_ROOT/Assets/koikoi-swift-assets"
+if [ ! -d "$ASSETS_ROOT/KoikoiArtwork.xcassets" ]; then
+    echo "絵柄の submodule がありません。git submodule update --init を実行してください。" >&2
+    exit 1
+fi
+SVG="$ASSETS_ROOT/icon-template.svg"
+ICON_ASSETS="$ASSETS_ROOT/AppIcon.icon/Assets"
+VISION_OUT="$ASSETS_ROOT/KoikoiArtwork.xcassets/AppIconVision.solidimagestack"
 
 # visionOS は 3 レイヤーの solidimagestack が必須（背面レイヤーは不透明であること）。
 echo "visionOS 用 (3 レイヤー):"
@@ -56,7 +63,7 @@ done
 
 # アプリ内表示用（About 画面など）。AppIcon.icon はコードから参照できないため、
 # 同じ SVG を通常の imageset として置き、Image("AppIconArtwork") で全プラットフォームから使う。
-ARTWORK_OUT="$REPO_ROOT/Resources/Assets.xcassets/AppIconArtwork.imageset"
+ARTWORK_OUT="$ASSETS_ROOT/KoikoiArtwork.xcassets/AppIconArtwork.imageset"
 echo "アプリ内表示用 (ベクター imageset):"
 mkdir -p "$ARTWORK_OUT"
 cp "$SVG" "$ARTWORK_OUT/AppIconArtwork.svg"

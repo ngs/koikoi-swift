@@ -48,7 +48,7 @@ struct CardImage: View {
     }
 
     var body: some View {
-        // 札画像はアプリの Assets.xcassets/Cards（メインバンドル）から解決する
+        // 札画像はアプリのカタログ（KoikoiArtwork.xcassets/Cards・メインバンドル）から解決する
         Image(card.assetName)
             .resizable()
             .aspectRatio(Card.aspectRatio, contentMode: .fit)

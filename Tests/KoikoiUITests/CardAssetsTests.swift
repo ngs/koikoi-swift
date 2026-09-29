@@ -16,19 +16,23 @@ import Testing
         #expect(seen.count == 48)
     }
 
-    /// Resources/Assets.xcassets/Cards に 48 枚全ての imageset がある
+    /// 絵柄の submodule に 48 枚全ての imageset がある
     /// （trace パイプラインと assetNames 表のズレを検出する）。
     /// SPM テストからアプリバンドルは見えないため、リポジトリ内の
     /// カタログソースを #filePath 起点で検証する。
-    @Test func allCardImagesetsExistInCatalog() throws {
+    /// 札の絵柄は MIT 適用外の private submodule にあるため、未取得の環境
+    /// （submodule への権限がない clone）ではこの検証を飛ばす。CI は
+    /// submodules: recursive で取得するので、そこでは必ず実行される。
+    @Test func allCardImagesetsExistInCatalog() {
         let catalog = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()  // KoikoiUITests
             .deletingLastPathComponent()  // Tests
             .deletingLastPathComponent()  // repo root
-            .appendingPathComponent("Resources/Assets.xcassets/Cards")
-        try #require(
-            FileManager.default.fileExists(atPath: catalog.path),
-            "catalog not found: \(catalog.path)")
+            .appendingPathComponent(
+                "Assets/koikoi-swift-assets/KoikoiArtwork.xcassets/Cards")
+        guard FileManager.default.fileExists(atPath: catalog.path) else {
+            return
+        }
 
         for card in Card.all {
             let svg = catalog

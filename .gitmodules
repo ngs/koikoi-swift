@@ -1,0 +1,4 @@
+[submodule "Assets/koikoi-swift-assets"]
+	path = Assets/koikoi-swift-assets
+	url = git@github.com:ngs/koikoi-swift-assets.git
+	branch = master

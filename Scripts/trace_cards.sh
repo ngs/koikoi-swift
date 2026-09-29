@@ -1,6 +1,6 @@
 #!/bin/bash
 # 旧 Koikoi のカード JPG 48 枚を「前処理 → Illustrator Image Trace →
-# Resources/Assets.xcassets/Cards への反映」まで一括で行う。
+# Assets/koikoi-swift-assets/KoikoiArtwork.xcassets/Cards への反映」まで一括で行う。
 # 中間生成物（前処理 PNG・トレース済み SVG）は /tmp に置き、コミットしない。
 set -euo pipefail
 

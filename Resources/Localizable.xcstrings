@@ -11,6 +11,17 @@
           }
         }
       }
+    },
+    "Yaku!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "役が成立！"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

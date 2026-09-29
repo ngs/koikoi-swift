@@ -19,3 +19,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+Exceptions
+
+The MIT license above covers the source code of this project only. It does NOT
+cover the graphics, which are all rights reserved, Copyright (c) 2026 Atsushi
+Nagase, and may not be reused without permission:
+
+  * The hanafuda card artwork (the 48 card faces), kept in the private
+    submodule at Assets/koikoi-swift-assets.
+  * The app icons, including the Icon Composer document, the visionOS icon
+    layers, the in-app icon artwork and the icon template, likewise kept in
+    that submodule.
+  * All other graphics and images belonging to the project, including the App
+    Store screenshots under fastlane/screenshots.
+
+Colors, string catalogs and other non-image resources in this repository are
+part of the source and remain under the MIT license.
