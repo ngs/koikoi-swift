@@ -70,9 +70,11 @@ platform :ios do
       skip_screenshots: true,
       skip_binary_upload: true,
       run_precheck_before_submit: false,
-      metadata_path: './fastlane/metadata',
+      # App-level fields (name, subtitle, privacy URL, categories) are shared by every
+      # platform on App Store Connect, so only the iOS folder carries them.
+      metadata_path: './fastlane/metadata/ios',
       # 年齢制限の審査票はアプリ全体の宣言（どのプラットフォームで実行しても反映）
-      app_rating_config_path: './fastlane/metadata/app_store_rating_config.json',
+      app_rating_config_path: './fastlane/metadata/ios/app_store_rating_config.json',
       app_identifier: 'io.ngs.Koikoi'
     )
     upload_privacy_details
@@ -220,7 +222,8 @@ platform :mac do
       skip_screenshots: true,
       skip_binary_upload: true,
       run_precheck_before_submit: false,
-      metadata_path: './fastlane/metadata',
+      # Version-level fields only; app-level fields live in metadata/ios.
+      metadata_path: './fastlane/metadata/mac',
       app_identifier: 'io.ngs.Koikoi'
     )
   end
@@ -304,7 +307,8 @@ platform :visionos do
       skip_screenshots: true,
       skip_binary_upload: true,
       run_precheck_before_submit: false,
-      metadata_path: './fastlane/metadata',
+      # Version-level fields only; app-level fields live in metadata/ios.
+      metadata_path: './fastlane/metadata/visionos',
       app_identifier: 'io.ngs.Koikoi'
     )
   end
@@ -319,7 +323,7 @@ platform :visionos do
       skip_binary_upload: true,
       skip_app_version_update: true,
       run_precheck_before_submit: false,
-      overwrite_screenshots: true,
+      overwrite_screenshots: false,
       screenshots_path: './fastlane/screenshots/visionos',
       app_identifier: 'io.ngs.Koikoi'
     )

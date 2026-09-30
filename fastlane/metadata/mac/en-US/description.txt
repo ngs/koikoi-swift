@@ -1,0 +1,21 @@
+Koi-Koi, the classic hanafuda card game, built as a native Mac app.
+
+Play two-player Koi-Koi under the standard rules against a computer opponent with four difficulty levels, in a window designed for the Mac.
+
+Made for the Mac:
+- Full keyboard play: move between cards with the arrow keys, play with Return or Space, and cancel with Esc. The keyboard cursor is always on, so you never need to reach for the mouse
+- Click or drag and drop cards with the trackpad or mouse
+- A dedicated three-column layout for Mac windows: your captures, the field and your opponent's captures side by side
+- Resize the window freely: the cards grow with it on a large display and stay readable when the window is small
+- The scoreboard and both players sit in the native window toolbar
+- Optional translucent window that lets your desktop show through, even when the window is in the background
+
+Game features:
+- Standard scoring: yaku, koi-koi calls, dealer rotation and draws
+- Four opponent strengths, from beginner to expert, including a search-based computer opponent
+- Yaku progress and "reach" (one card away) indicators make it easy to learn
+- Your game is saved automatically and picks up right where you left off
+- Four color themes
+- Game Center leaderboards
+
+No account, no ads, no in-app purchases. Works fully offline.
