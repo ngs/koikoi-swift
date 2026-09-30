@@ -202,7 +202,11 @@ platform :mac do
       skip_screenshots: true,
       skip_metadata: true,
       force: true,
-      run_precheck_before_submit: false
+      run_precheck_before_submit: false,
+      # Point at the platform folders so deliver does not scan the top-level
+      # metadata dir, whose per-platform subfolders are not valid locale names.
+      metadata_path: './fastlane/metadata/mac',
+      screenshots_path: './fastlane/screenshots/mac'
     )
   end
   desc 'Fail unless an editable App Store version exists (used by CI to skip metadata delivery)'
