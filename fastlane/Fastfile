@@ -323,7 +323,7 @@ platform :visionos do
       skip_binary_upload: true,
       skip_app_version_update: true,
       run_precheck_before_submit: false,
-      overwrite_screenshots: true,
+      overwrite_screenshots: false,
       screenshots_path: './fastlane/screenshots/visionos',
       app_identifier: 'io.ngs.Koikoi'
     )
