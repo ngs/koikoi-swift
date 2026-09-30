@@ -127,6 +127,7 @@ platform :ios do
       run_precheck_before_submit: false,
       overwrite_screenshots: true,
       screenshots_path: './fastlane/screenshots/ios',
+      metadata_path: './fastlane/metadata/ios',
       app_identifier: 'io.ngs.Koikoi'
     )
   end
@@ -244,6 +245,7 @@ platform :mac do
       run_precheck_before_submit: false,
       overwrite_screenshots: true,
       screenshots_path: './fastlane/screenshots/mac',
+      metadata_path: './fastlane/metadata/mac',
       app_identifier: 'io.ngs.Koikoi'
     )
   end
@@ -329,6 +331,7 @@ platform :visionos do
       run_precheck_before_submit: false,
       overwrite_screenshots: false,
       screenshots_path: './fastlane/screenshots/visionos',
+      metadata_path: './fastlane/metadata/visionos',
       app_identifier: 'io.ngs.Koikoi'
     )
   end
