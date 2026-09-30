@@ -2,3 +2,11 @@ No account or sign-in is required. The app works fully offline.
 Game Center is optional: leaderboards are only reported when the player is signed in.
 The in-progress game is saved locally on the device and restored on the next launch.
 Koi-Koi is a traditional Japanese card game played for points only; there is no wagering, in-app purchase, or real-money element.
+
+Regarding Guideline 4.3(a) (previous macOS rejection):
+- The iOS and visionOS builds of this same app (same Bundle ID io.ngs.Koikoi, same version) have already been approved. The macOS build shares their codebase and content.
+- The app is my own original work. The full source code is public at https://github.com/ngs/koikoi-swift. It is a Swift port of my own earlier open-source project, go-koikoi (https://github.com/ngs/go-koikoi).
+- No purchased template, reskin, or third-party application code is used, and I have not submitted similar apps from any other account.
+- Koi-Koi is a traditional card game, so other apps for the same game exist. This app's rules engine, computer opponent (four difficulty levels, the strongest using a determinized ISMCTS search), and user interface are my own. There are no ads, no in-app purchases, and no third-party SDKs.
+- The macOS build has Mac-specific behavior: full hardware keyboard play (arrow keys, Return/Space, Esc) with an always-visible keyboard cursor, a three-column layout for resizable Mac windows, the scoreboard in the native window toolbar, and an optional translucent window backed by NSVisualEffectView.
+If a specific app was matched as similar, I would be grateful to know which one so that I can explain the differences.

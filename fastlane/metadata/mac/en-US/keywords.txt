@@ -1,1 +1,1 @@
-hanafuda,koikoi,card game,japanese,board game,koi-koi,yaku
+hanafuda,koikoi,koi-koi,card game,japanese,mac,keyboard,offline,strategy,yaku,board game
